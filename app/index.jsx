@@ -187,12 +187,15 @@ export default function Home() {
             {...item}
             onPress={() =>
               router.push({
-                pathname: "/formulario",
+                pathname: "/os-relatorios",
                 params: {
+                  id: item.id,
                   os: item.os,
                   client: item.client,
-                  system: item.system
-                }
+                  sector: item.sector,
+                  system: item.system,
+                  delivery_date: item.delivery_date,
+                },
               })
             }
             onDelete={() => removerServico(item.id)}

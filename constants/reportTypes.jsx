@@ -1,0 +1,51 @@
+export const REPORT_TYPES = [
+  {
+    id: "iq_protocol",
+    title: "Protocolo de Inspeção de Instalação - IQ",
+    category: "IQ",
+    kind: "protocolo",
+    enabled: false,
+  },
+  {
+    id: "iq_report",
+    title: "Relatório de Inspeção de Instalação - IQ",
+    category: "IQ",
+    kind: "relatorio",
+    enabled: false,
+  },
+  {
+    id: "oq_protocol",
+    title: "Protocolo de Inspeção de Operação - OQ",
+    category: "OQ",
+    kind: "protocolo",
+    enabled: true,
+  },
+  {
+    id: "oq_report",
+    title: "Relatório de Inspeção de Operação - OQ",
+    category: "OQ",
+    kind: "relatorio",
+    enabled: true,
+  },
+  {
+    id: "pq_protocol",
+    title: "Protocolo de Inspeção de Performance - PQ",
+    category: "PQ",
+    kind: "protocolo",
+    enabled: false,
+  },
+  {
+    id: "pq_report",
+    title: "Relatório de Inspeção de Performance - PQ",
+    category: "PQ",
+    kind: "relatorio",
+    enabled: false,
+  },
+  {
+    id: "pq_report_with_procedure",
+    title: "Relatório de PQ com procedimento - PQ",
+    category: "PQ",
+    kind: "relatorio_com_procedimento",
+    enabled: false,
+  },
+];

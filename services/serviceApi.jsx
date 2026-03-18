@@ -1,6 +1,8 @@
 import axios from "axios";
 
-const API_URL = "https://api-servicos.onrender.com/servicos";
+const API_URL = "http://192.168.1.7:3001/servicos";
+// const API_URL = "https://api-servicos.onrender.com/servicos";
+
 
 export function getServicos() {
   return axios.get(API_URL);
