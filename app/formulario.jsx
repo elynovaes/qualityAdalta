@@ -1,11 +1,10 @@
 import { useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
-import { ScrollView, StyleSheet, Text } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { StyleSheet, Text } from "react-native";
+import FormScreen from "../components/FormScreen";
 import SectionOneForm from "../components/SectionOneForm";
 
 export default function Formulario() {
-
   const { os, client, system } = useLocalSearchParams();
 
   const [formData, setFormData] = useState({
@@ -36,44 +35,29 @@ export default function Formulario() {
   });
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+    <FormScreen>
+      <Text style={styles.title}>OS {os}</Text>
+      <Text style={styles.subtitle}>{client}</Text>
+      <Text style={styles.subtitle}>{system}</Text>
 
-        <Text style={styles.title}>OS {os}</Text>
-        <Text style={styles.subtitle}>{client}</Text>
-        <Text style={styles.subtitle}>{system}</Text>
-
-        <SectionOneForm
-          formData={formData}
-          setFormData={setFormData}
-        />
-
-      </ScrollView>
-    </SafeAreaView>
+      <SectionOneForm
+        formData={formData}
+        setFormData={setFormData}
+      />
+    </FormScreen>
   );
 }
 
 const styles = StyleSheet.create({
-
-  container: {
-    flex: 1,
-    backgroundColor: "#f3f5f7",
-  },
-
-  content: {
-    padding: 16,
-  },
-
   title: {
     fontSize: 22,
     fontWeight: "bold",
-    marginBottom: 6
+    marginBottom: 6,
   },
 
   subtitle: {
     fontSize: 16,
     color: "#555",
-    marginBottom: 2
-  }
-
+    marginBottom: 2,
+  },
 });

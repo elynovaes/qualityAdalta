@@ -1,7 +1,7 @@
 import { useLocalSearchParams } from "expo-router";
 import React, { useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import FormScreen from "../components/FormScreen";
 import SectionOneForm from "../components/SectionOneForm";
 
 export default function FormularioOq() {
@@ -85,56 +85,54 @@ export default function FormularioOq() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Formulário OQ</Text>
+    <FormScreen>
+      <Text style={styles.title}>Formulário OQ</Text>
 
-        <Text style={styles.osInfo}>OS {params.os}</Text>
-        <Text style={styles.osSubInfo}>{params.client}</Text>
-        <Text style={styles.osSubInfo}>{params.system}</Text>
+      <Text style={styles.osInfo}>OS {params.os}</Text>
+      <Text style={styles.osSubInfo}>{params.client}</Text>
+      <Text style={styles.osSubInfo}>{params.system}</Text>
 
-        <View style={styles.generalBox}>
-          <Text style={styles.generalTitle}>Dados gerais</Text>
-          <Text style={styles.generalText}>Empresa: {generalData.company_name || "-"}</Text>
-          <Text style={styles.generalText}>Qtd. de sistemas: {generalData.systems_quantity || "-"}</Text>
-          <Text style={styles.generalText}>Elaborador: {generalData.prepared_by || "-"}</Text>
-          <Text style={styles.generalText}>Revisor: {generalData.reviewed_by || "-"}</Text>
-        </View>
+      <View style={styles.generalBox}>
+        <Text style={styles.generalTitle}>Dados gerais</Text>
+        <Text style={styles.generalText}>
+          Empresa: {generalData.company_name || "-"}
+        </Text>
+        <Text style={styles.generalText}>
+          Qtd. de sistemas: {generalData.systems_quantity || "-"}
+        </Text>
+        <Text style={styles.generalText}>
+          Elaborador: {generalData.prepared_by || "-"}
+        </Text>
+        <Text style={styles.generalText}>
+          Revisor: {generalData.reviewed_by || "-"}
+        </Text>
+      </View>
 
-        {oqItems.map((item) => {
-          const reportKey = `${item.system_number}_${item.report_type_id}`;
+      {oqItems.map((item) => {
+        const reportKey = `${item.system_number}_${item.report_type_id}`;
 
-          return (
-            <View key={reportKey} style={styles.reportBlock}>
-              <Text style={styles.reportTitle}>Sistema {item.system_number}</Text>
-              <Text style={styles.reportSubtitle}>{item.report_title}</Text>
-              <Text style={styles.reportCode}>Código: {item.code}</Text>
+        return (
+          <View key={reportKey} style={styles.reportBlock}>
+            <Text style={styles.reportTitle}>Sistema {item.system_number}</Text>
+            <Text style={styles.reportSubtitle}>{item.report_title}</Text>
+            <Text style={styles.reportCode}>Código: {item.code}</Text>
 
-              <SectionOneForm
-                formData={formsByReport[reportKey]}
-                setFormData={(updater) => updateFormData(reportKey, updater)}
-              />
-            </View>
-          );
-        })}
+            <SectionOneForm
+              formData={formsByReport[reportKey]}
+              setFormData={(updater) => updateFormData(reportKey, updater)}
+            />
+          </View>
+        );
+      })}
 
-        <Pressable style={styles.button} onPress={salvarRascunho}>
-          <Text style={styles.buttonText}>Salvar rascunho</Text>
-        </Pressable>
-      </ScrollView>
-    </SafeAreaView>
+      <Pressable style={styles.button} onPress={salvarRascunho}>
+        <Text style={styles.buttonText}>Salvar rascunho</Text>
+      </Pressable>
+    </FormScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f3f5f7",
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 40,
-  },
   title: {
     fontSize: 22,
     fontWeight: "bold",

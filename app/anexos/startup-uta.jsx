@@ -1,12 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import {
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View
 } from 'react-native';
+import FormScreen from '../../components/FormScreen'; // ajuste o caminho se necessário
 
 export default function StartupUta() {
   const [mostrarInfo, setMostrarInfo] = useState(false);
@@ -33,7 +33,6 @@ export default function StartupUta() {
     const altura = parseFloat(String(alturaDuto).replace(',', '.'));
 
     if (isNaN(largura) || isNaN(altura)) return '';
-
     return (largura * altura).toFixed(4);
   }, [larguraDuto, alturaDuto]);
 
@@ -82,7 +81,7 @@ export default function StartupUta() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <FormScreen>
       <Text style={styles.title}>Startup de Unidade de Tratamento - UTA</Text>
 
       {/* IDENTIFICAÇÃO */}
@@ -206,12 +205,11 @@ export default function StartupUta() {
           ))}
         </View>
       )}
-    </ScrollView>
+    </FormScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20, backgroundColor: '#fff' },
   title: { fontSize: 22, fontWeight: '700', marginBottom: 10 },
 
   sectionHeader: {

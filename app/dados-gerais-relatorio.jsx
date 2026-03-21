@@ -3,13 +3,12 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import FormScreen from "../components/FormScreen";
 import { REPORT_TYPES } from "../constants/reportTypes";
 
 export default function DadosGeraisRelatorio() {
@@ -71,7 +70,7 @@ export default function DadosGeraisRelatorio() {
   }
 
   function buildReportCodes(quantity, reports, previousCodes = []) {
-  const totalSystems = Number(quantity);
+    const totalSystems = Number(quantity);
 
     if (!totalSystems || totalSystems < 1) {
       return [];
@@ -93,7 +92,9 @@ export default function DadosGeraisRelatorio() {
           report_title: report.title,
           report_category: report.category,
           report_kind: report.kind,
-          code: existingItem ? existingItem.code : generateTestCode(nextCodes.length),
+          code: existingItem
+            ? existingItem.code
+            : generateTestCode(nextCodes.length),
         });
       }
     }
@@ -167,183 +168,173 @@ export default function DadosGeraisRelatorio() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Dados gerais do relatório</Text>
+    <FormScreen>
+      <Text style={styles.title}>Dados gerais do relatório</Text>
 
-        <Text style={styles.osInfo}>OS {params.os}</Text>
-        <Text style={styles.osSubInfo}>{params.client}</Text>
-        <Text style={styles.osSubInfo}>{params.system}</Text>
+      <Text style={styles.osInfo}>OS {params.os}</Text>
+      <Text style={styles.osSubInfo}>{params.client}</Text>
+      <Text style={styles.osSubInfo}>{params.system}</Text>
 
-        <View style={styles.selectedReportsBox}>
-          <Text style={styles.selectedReportsTitle}>Relatórios selecionados</Text>
+      <View style={styles.selectedReportsBox}>
+        <Text style={styles.selectedReportsTitle}>Relatórios selecionados</Text>
 
-          {selectedReportObjects.map((item) => (
-            <Text key={item.id} style={styles.selectedReportItem}>
-              • {item.title}
-            </Text>
-          ))}
+        {selectedReportObjects.map((item) => (
+          <Text key={item.id} style={styles.selectedReportItem}>
+            • {item.title}
+          </Text>
+        ))}
+      </View>
+
+      <Text style={styles.label}>Quantidade de sistemas</Text>
+      <TextInput
+        style={styles.input}
+        value={form.systems_quantity}
+        onChangeText={handleSystemsQuantityChange}
+        placeholder="Ex: 2"
+        keyboardType="numeric"
+      />
+
+      {reportCodes.length > 0 && (
+        <View style={styles.codesSection}>
+          <Text style={styles.codesSectionTitle}>
+            Códigos dos relatórios por sistema
+          </Text>
+
+          {Array.from(
+            { length: Number(form.systems_quantity || 0) },
+            (_, index) => index + 1
+          ).map((systemNumber) => {
+            const systemItems = reportCodes.filter(
+              (item) => item.system_number === systemNumber
+            );
+
+            return (
+              <View key={systemNumber} style={styles.systemBlock}>
+                <Text style={styles.systemTitle}>Sistema {systemNumber}</Text>
+
+                {systemItems.map((item) => (
+                  <View key={`${item.system_number}-${item.report_type_id}`}>
+                    <Text style={styles.label}>{item.report_title}</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={item.code}
+                      onChangeText={(value) =>
+                        updateReportCode(
+                          item.system_number,
+                          item.report_type_id,
+                          value
+                        )
+                      }
+                      placeholder="Ex: ADR 2558-26-0197"
+                    />
+                  </View>
+                ))}
+              </View>
+            );
+          })}
         </View>
+      )}
 
-        <Text style={styles.label}>Quantidade de sistemas</Text>
-        <TextInput
-          style={styles.input}
-          value={form.systems_quantity}
-          onChangeText={handleSystemsQuantityChange}
-          placeholder="Ex: 2"
-          keyboardType="numeric"
-        />
+      <Text style={styles.label}>Logo do cliente</Text>
+      <TextInput
+        style={styles.input}
+        value={form.client_logo}
+        onChangeText={(value) => updateField("client_logo", value)}
+        placeholder="Caminho, URL ou referência da logo"
+      />
 
-        {reportCodes.length > 0 && (
-          <View style={styles.codesSection}>
-            <Text style={styles.codesSectionTitle}>
-              Códigos dos relatórios por sistema
-            </Text>
+      <Text style={styles.label}>Nome da empresa</Text>
+      <TextInput
+        style={styles.input}
+        value={form.company_name}
+        onChangeText={(value) => updateField("company_name", value)}
+        placeholder="Nome da empresa"
+      />
 
-            {Array.from(
-              { length: Number(form.systems_quantity || 0) },
-              (_, index) => index + 1
-            ).map((systemNumber) => {
-              const systemItems = reportCodes.filter(
-                (item) => item.system_number === systemNumber
-              );
+      <Text style={styles.label}>Nome do aprovador</Text>
+      <TextInput
+        style={styles.input}
+        value={form.approver_name}
+        onChangeText={(value) => updateField("approver_name", value)}
+        placeholder="Nome do aprovador"
+      />
 
-              return (
-                <View key={systemNumber} style={styles.systemBlock}>
-                  <Text style={styles.systemTitle}>Sistema {systemNumber}</Text>
+      <Text style={styles.label}>Área profissional do aprovador</Text>
+      <TextInput
+        style={styles.input}
+        value={form.approver_role}
+        onChangeText={(value) => updateField("approver_role", value)}
+        placeholder="Ex: Gerente de Qualidade"
+      />
 
-                  {systemItems.map((item) => (
-                    <View key={`${item.system_number}-${item.report_type_id}`}>
-                      <Text style={styles.label}>{item.report_title}</Text>
-                      <TextInput
-                        style={styles.input}
-                        value={item.code}
-                        onChangeText={(value) =>
-                          updateReportCode(
-                            item.system_number,
-                            item.report_type_id,
-                            value
-                          )
-                        }
-                        placeholder="Ex: ADR 2558-26-0197"
-                      />
-                    </View>
-                  ))}
-                </View>
-              );
-            })}
-          </View>
-        )}
+      <Text style={styles.label}>E-mail do aprovador</Text>
+      <TextInput
+        style={styles.input}
+        value={form.approver_email}
+        onChangeText={(value) => updateField("approver_email", value)}
+        placeholder="email@empresa.com"
+        keyboardType="email-address"
+        autoCapitalize="none"
+      />
 
-        <Text style={styles.label}>Logo do cliente</Text>
-        <TextInput
-          style={styles.input}
-          value={form.client_logo}
-          onChangeText={(value) => updateField("client_logo", value)}
-          placeholder="Caminho, URL ou referência da logo"
-        />
+      <Text style={styles.label}>Número de contato do aprovador</Text>
+      <TextInput
+        style={styles.input}
+        value={form.approver_phone}
+        onChangeText={(value) => updateField("approver_phone", value)}
+        placeholder="(11) 99999-9999"
+        keyboardType="phone-pad"
+      />
 
-        <Text style={styles.label}>Nome da empresa</Text>
-        <TextInput
-          style={styles.input}
-          value={form.company_name}
-          onChangeText={(value) => updateField("company_name", value)}
-          placeholder="Nome da empresa"
-        />
+      <Text style={styles.label}>Endereço da unidade</Text>
+      <TextInput
+        style={styles.input}
+        value={form.unit_address}
+        onChangeText={(value) => updateField("unit_address", value)}
+        placeholder="Endereço da unidade"
+      />
 
-        <Text style={styles.label}>Nome do aprovador</Text>
-        <TextInput
-          style={styles.input}
-          value={form.approver_name}
-          onChangeText={(value) => updateField("approver_name", value)}
-          placeholder="Nome do aprovador"
-        />
+      <Text style={styles.label}>CEP da unidade</Text>
+      <TextInput
+        style={styles.input}
+        value={form.unit_zip_code}
+        onChangeText={(value) => updateField("unit_zip_code", value)}
+        placeholder="00000-000"
+        keyboardType="numeric"
+      />
 
-        <Text style={styles.label}>Área profissional do aprovador</Text>
-        <TextInput
-          style={styles.input}
-          value={form.approver_role}
-          onChangeText={(value) => updateField("approver_role", value)}
-          placeholder="Ex: Gerente de Qualidade"
-        />
+      <Text style={styles.label}>Data de emissão</Text>
+      <TextInput
+        style={styles.input}
+        value={form.issue_date}
+        onChangeText={(value) => updateField("issue_date", value)}
+        placeholder="dd/mm/aaaa"
+      />
 
-        <Text style={styles.label}>E-mail do aprovador</Text>
-        <TextInput
-          style={styles.input}
-          value={form.approver_email}
-          onChangeText={(value) => updateField("approver_email", value)}
-          placeholder="email@empresa.com"
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
+      <Text style={styles.label}>Responsável pela elaboração</Text>
+      <TextInput
+        style={styles.input}
+        value={form.prepared_by}
+        onChangeText={(value) => updateField("prepared_by", value)}
+        placeholder="Nome do elaborador"
+      />
 
-        <Text style={styles.label}>Número de contato do aprovador</Text>
-        <TextInput
-          style={styles.input}
-          value={form.approver_phone}
-          onChangeText={(value) => updateField("approver_phone", value)}
-          placeholder="(11) 99999-9999"
-          keyboardType="phone-pad"
-        />
+      <Text style={styles.label}>Responsável pela revisão</Text>
+      <TextInput
+        style={styles.input}
+        value={form.reviewed_by}
+        onChangeText={(value) => updateField("reviewed_by", value)}
+        placeholder="Nome do revisor"
+      />
 
-        <Text style={styles.label}>Endereço da unidade</Text>
-        <TextInput
-          style={styles.input}
-          value={form.unit_address}
-          onChangeText={(value) => updateField("unit_address", value)}
-          placeholder="Endereço da unidade"
-        />
-
-        <Text style={styles.label}>CEP da unidade</Text>
-        <TextInput
-          style={styles.input}
-          value={form.unit_zip_code}
-          onChangeText={(value) => updateField("unit_zip_code", value)}
-          placeholder="00000-000"
-          keyboardType="numeric"
-        />
-
-        <Text style={styles.label}>Data de emissão</Text>
-        <TextInput
-          style={styles.input}
-          value={form.issue_date}
-          onChangeText={(value) => updateField("issue_date", value)}
-          placeholder="dd/mm/aaaa"
-        />
-
-        <Text style={styles.label}>Responsável pela elaboração</Text>
-        <TextInput
-          style={styles.input}
-          value={form.prepared_by}
-          onChangeText={(value) => updateField("prepared_by", value)}
-          placeholder="Nome do elaborador"
-        />
-
-        <Text style={styles.label}>Responsável pela revisão</Text>
-        <TextInput
-          style={styles.input}
-          value={form.reviewed_by}
-          onChangeText={(value) => updateField("reviewed_by", value)}
-          placeholder="Nome do revisor"
-        />
-
-        <Pressable style={styles.button} onPress={continuar}>
-          <Text style={styles.buttonText}>Continuar</Text>
-        </Pressable>
-      </ScrollView>
-    </SafeAreaView>
+      <Pressable style={styles.button} onPress={continuar}>
+        <Text style={styles.buttonText}>Continuar</Text>
+      </Pressable>
+    </FormScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f3f5f7",
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 40,
-  },
   title: {
     fontSize: 22,
     fontWeight: "bold",

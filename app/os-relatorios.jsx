@@ -1,6 +1,13 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Alert, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Alert,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { REPORT_TYPES } from "../constants/reportTypes";
 
@@ -84,13 +91,16 @@ export default function OsRelatorios() {
       <Text style={styles.clientText}>{params.client}</Text>
       <Text style={styles.systemText}>{params.system}</Text>
 
-      <Text style={styles.sectionTitle}>Escolha os relatórios que deseja criar</Text>
+      <Text style={styles.sectionTitle}>
+        Escolha os relatórios que deseja criar
+      </Text>
 
       <FlatList
         data={REPORT_TYPES}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
       />
 
       <Pressable style={styles.button} onPress={continuar}>

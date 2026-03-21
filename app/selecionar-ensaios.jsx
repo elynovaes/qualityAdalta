@@ -32,7 +32,10 @@ export default function SelecionarAnexo() {
         Escolha um anexo para abrir a tela de preenchimento.
       </Text>
 
-      <ScrollView contentContainerStyle={styles.lista}>
+      <ScrollView
+        contentContainerStyle={styles.lista}
+        showsVerticalScrollIndicator={false}
+      >
         {anexos.map((anexo) => (
           <TouchableOpacity
             key={anexo.id}
