@@ -156,7 +156,7 @@ export default function DadosGeraisRelatorio() {
     }
 
     router.push({
-      pathname: "/formulario-oq",
+      pathname: "/selecionar-ensaios",
       params: {
         ...params,
         selectedReports: JSON.stringify(selectedReports),
