@@ -16,7 +16,8 @@
     "name": "Quality Adalta",
     "slug": "quality-adalta",
     "android": {
-      "package": "com.elynovaes.qualityadalta"
+      "package": "com.elynovaes.qualityadalta",
+      "softwareKeyboardLayoutMode": "resize"
     },
     "extra": {
       "eas": {
