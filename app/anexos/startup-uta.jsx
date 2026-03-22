@@ -25,9 +25,41 @@ const criarSecaoInicial = () => ({
   expandida: false,
 });
 
+const criarMotor = () => ({
+  frequencia: '',
+  tensaoNominal: '',
+  tensaoRS: '',
+  tensaoRT: '',
+  tensaoST: '',
+  correnteNominal: '',
+  correnteR: '',
+  correnteS: '',
+  correnteT: '',
+});
+
 function parseNumero(valor) {
   const numero = parseFloat(String(valor).replace(',', '.'));
   return Number.isNaN(numero) ? null : numero;
+}
+
+function calcularDesequilibrio(valores) {
+  const numeros = valores
+    .map((v) => parseNumero(v))
+    .filter((v) => v !== null);
+
+  if (numeros.length !== 3) return '';
+
+  const media = numeros.reduce((a, b) => a + b, 0) / 3;
+  if (media === 0) return '';
+
+  const valorMaisDistante = numeros.reduce((maisDistante, atual) => {
+    const desvioAtual = Math.abs(atual - media);
+    const desvioMaisDistante = Math.abs(maisDistante - media);
+    return desvioAtual > desvioMaisDistante ? atual : maisDistante;
+  }, numeros[0]);
+
+  const fd = (Math.abs(valorMaisDistante - media) / media) * 100;
+  return fd.toFixed(2);
 }
 
 function calcularDadosSecao(secao) {
@@ -82,14 +114,18 @@ function calcularDadosSecao(secao) {
 
   const pontosValidos = Object.values(secao.valoresPitot)
     .map((valor) => parseNumero(valor))
-    .filter((valor) => valor && valor > 0);
+    .filter((valor) => valor !== null && valor > 0);
 
   const pontosPreenchidos = pontosValidos.length;
   const todosPontosPreenchidos =
     totalPontosEsperados > 0 && pontosPreenchidos === totalPontosEsperados;
 
   let vazaoMediaCalculada = '';
-  if (areaDutoNumero && todosPontosPreenchidos && pontosValidos.length === totalPontosEsperados) {
+  if (
+    areaDutoNumero &&
+    todosPontosPreenchidos &&
+    pontosValidos.length === totalPontosEsperados
+  ) {
     const soma = pontosValidos.reduce((acc, valor) => acc + valor, 0);
     const velocidadeMedia = soma / pontosValidos.length;
     const vazaoMedia = velocidadeMedia * areaDutoNumero * 3600;
@@ -109,7 +145,13 @@ function calcularDadosSecao(secao) {
   }
 
   let avaliacaoVazao = null;
-  if (todosPontosPreenchidos && vazaoNominal && vazaoNominal > 0 && vazaoMediaNumero && vazaoMediaNumero > 0) {
+  if (
+    todosPontosPreenchidos &&
+    vazaoNominal &&
+    vazaoNominal > 0 &&
+    vazaoMediaNumero &&
+    vazaoMediaNumero > 0
+  ) {
     const limiteMin = vazaoNominal * 0.9;
     const limiteMax = vazaoNominal * 1.1;
     const conforme = vazaoMediaNumero >= limiteMin && vazaoMediaNumero <= limiteMax;
@@ -139,6 +181,9 @@ function calcularDadosSecao(secao) {
 export default function StartupUta() {
   const [mostrarInfo, setMostrarInfo] = useState(false);
   const [mostrarVazaoAr, setMostrarVazaoAr] = useState(false);
+  const [mostrarDampers, setMostrarDampers] = useState(false);
+  const [mostrarCondicoesOperacao, setMostrarCondicoesOperacao] = useState(false);
+  const [mostrarEletrica, setMostrarEletrica] = useState(false);
 
   const [dataInspecao, setDataInspecao] = useState('');
   const [sistemaArea, setSistemaArea] = useState('');
@@ -150,13 +195,40 @@ export default function StartupUta() {
   const [balometroSerie, setBalometroSerie] = useState('');
   const [manometroSerie, setManometroSerie] = useState('');
 
-  const [secoesSelecionadas, setSecoesSelecionadas] = useState(['insuflamento', 'retorno']);
+  const [secoesSelecionadas, setSecoesSelecionadas] = useState([
+    'insuflamento',
+    'retorno',
+  ]);
 
   const [secoes, setSecoes] = useState({
     insuflamento: { ...criarSecaoInicial(), expandida: true },
-    retorno: criarSecaoInicial(),
+    retorno: { ...criarSecaoInicial(), expandida: true },
     arExterno: criarSecaoInicial(),
   });
+
+  const [dampers, setDampers] = useState({
+    insuflamento: {
+      abertura: '',
+      numeroLacre: '',
+    },
+    retorno: {
+      abertura: '',
+      numeroLacre: '',
+    },
+    arExterno: {
+      abertura: '',
+      numeroLacre: '',
+    },
+  });
+
+  const [condicoesOperacao, setCondicoesOperacao] = useState({
+    pressaoSaidaInsuflamento: '',
+    pressaoEstaticaTotal: '',
+    pressaoSimva: '',
+  });
+
+  const [quantidadeMotores, setQuantidadeMotores] = useState('1');
+  const [motores, setMotores] = useState([criarMotor()]);
 
   const toggleSelecaoSecao = (secaoId) => {
     setSecoesSelecionadas((prev) => {
@@ -208,6 +280,54 @@ export default function StartupUta() {
     }));
   };
 
+  const atualizarDamper = (tipo, campo, valor) => {
+    setDampers((prev) => ({
+      ...prev,
+      [tipo]: {
+        ...prev[tipo],
+        [campo]: valor,
+      },
+    }));
+  };
+
+  const atualizarCondicaoOperacao = (campo, valor) => {
+    setCondicoesOperacao((prev) => ({
+      ...prev,
+      [campo]: valor,
+    }));
+  };
+
+  const atualizarMotor = (index, campo, valor) => {
+    setMotores((prev) => {
+      const novos = [...prev];
+      novos[index] = {
+        ...novos[index],
+        [campo]: valor,
+      };
+      return novos;
+    });
+  };
+
+  const atualizarQuantidadeMotores = (valor) => {
+    setQuantidadeMotores(valor);
+
+    const qtd = parseInt(valor, 10);
+    if (isNaN(qtd) || qtd <= 0) return;
+
+    setMotores((prev) => {
+      const novos = [...prev];
+
+      if (qtd > novos.length) {
+        while (novos.length < qtd) {
+          novos.push(criarMotor());
+        }
+        return novos;
+      }
+
+      return novos.slice(0, qtd);
+    });
+  };
+
   const dadosSecoes = useMemo(() => {
     return {
       insuflamento: calcularDadosSecao(secoes.insuflamento),
@@ -215,6 +335,26 @@ export default function StartupUta() {
       arExterno: calcularDadosSecao(secoes.arExterno),
     };
   }, [secoes]);
+
+  const vazaoInsuflamento = dadosSecoes.insuflamento.vazaoMediaCalculada;
+  const pressaoSimvaNumero = parseNumero(condicoesOperacao.pressaoSimva);
+  const vazaoInsuflamentoNumero = parseNumero(vazaoInsuflamento);
+
+  const fatorK = useMemo(() => {
+    if (
+      !vazaoInsuflamentoNumero ||
+      vazaoInsuflamentoNumero <= 0 ||
+      pressaoSimvaNumero === null
+    ) {
+      return '';
+    }
+
+    const deltaPSimva = Math.abs(pressaoSimvaNumero);
+    if (deltaPSimva <= 0) return '';
+
+    const k = vazaoInsuflamentoNumero / Math.sqrt(deltaPSimva);
+    return k.toFixed(4);
+  }, [vazaoInsuflamentoNumero, pressaoSimvaNumero]);
 
   const renderSecaoDuto = (secaoId, titulo) => {
     const secao = secoes[secaoId];
@@ -283,11 +423,7 @@ export default function StartupUta() {
             </View>
 
             <Text style={styles.label}>Velocidade de referência (m/s)</Text>
-            <TextInput
-              style={styles.input}
-              value={dados.faixaVelocidade}
-              editable={false}
-            />
+            <TextInput style={styles.input} value={dados.faixaVelocidade} editable={false} />
 
             <Text style={styles.subSectionTitle}>Matriz de Medição</Text>
 
@@ -361,14 +497,17 @@ export default function StartupUta() {
                     </Text>
 
                     <Text style={styles.resultadoInfo}>
-                      Faixa aceitável: {dados.avaliacaoVazao.limiteMin} a {dados.avaliacaoVazao.limiteMax} m³/h
+                      Faixa aceitável: {dados.avaliacaoVazao.limiteMin} a{' '}
+                      {dados.avaliacaoVazao.limiteMax} m³/h
                     </Text>
 
                     <Text style={styles.label}>Comentário técnico</Text>
                     <TextInput
                       style={styles.inputComentario}
                       value={secao.comentarioVazao}
-                      onChangeText={(text) => atualizarCampoSecao(secaoId, 'comentarioVazao', text)}
+                      onChangeText={(text) =>
+                        atualizarCampoSecao(secaoId, 'comentarioVazao', text)
+                      }
                       placeholder="Descreva o motivo da vazão estar fora do critério..."
                       multiline
                       textAlignVertical="top"
@@ -445,23 +584,36 @@ export default function StartupUta() {
 
       {mostrarVazaoAr && (
         <View style={styles.mainSectionBox}>
-          <Text style={styles.selectionTitle}>Selecione 2 seções para preenchimento</Text>
+          <Text style={styles.selectionTitle}>Selecione até 2 seções para preenchimento</Text>
           <Text style={styles.selectionSubtitle}>
-            A seção 1.1 Duto de ar de insuflamento é obrigatória.
+            Recomenda-se incluir insuflamento entre as opções selecionadas.
           </Text>
 
           <View style={styles.selectionRow}>
-            {SECOES_DUTO.map((item) => {
+            {SECOES_DUTO.map((item, index) => {
               const selecionada = secoesSelecionadas.includes(item.id);
 
               return (
                 <TouchableOpacity
                   key={item.id}
-                  style={[styles.optionButton, selecionada && styles.optionButtonSelected]}
+                  style={[
+                    styles.optionButton,
+                    selecionada && styles.optionButtonSelected,
+                    index === SECOES_DUTO.length - 1 && styles.optionButtonLast,
+                  ]}
                   onPress={() => toggleSelecaoSecao(item.id)}
                 >
-                  <Text style={[styles.optionButtonText, selecionada && styles.optionButtonTextSelected]}>
-                    {item.id === 'insuflamento' ? '1.1' : item.id === 'retorno' ? '1.2' : '1.3'}
+                  <Text
+                    style={[
+                      styles.optionButtonText,
+                      selecionada && styles.optionButtonTextSelected,
+                    ]}
+                  >
+                    {item.id === 'insuflamento'
+                      ? '1.1'
+                      : item.id === 'retorno'
+                      ? '1.2'
+                      : '1.3'}
                   </Text>
                 </TouchableOpacity>
               );
@@ -471,6 +623,343 @@ export default function StartupUta() {
           {secoesSelecionadas.map((secaoId) => {
             const item = SECOES_DUTO.find((s) => s.id === secaoId);
             return renderSecaoDuto(secaoId, item.titulo);
+          })}
+        </View>
+      )}
+
+      <TouchableOpacity
+        style={styles.sectionHeader}
+        onPress={() => setMostrarDampers(!mostrarDampers)}
+      >
+        <Text style={styles.sectionTitle}>2.0 Posição [%] e lacre dos dampers</Text>
+        <Text style={styles.toggleText}>{mostrarDampers ? '−' : '+'}</Text>
+      </TouchableOpacity>
+
+      {mostrarDampers && (
+        <View style={styles.mainSectionBox}>
+          <View style={styles.tableRow}>
+            <View style={styles.firstColumn} />
+            <View style={styles.otherColumn}>
+              <Text style={styles.tableHeader}>Insuflamento</Text>
+            </View>
+            <View style={styles.otherColumn}>
+              <Text style={styles.tableHeader}>Retorno</Text>
+            </View>
+            <View style={styles.otherColumn}>
+              <Text style={styles.tableHeader}>Ar Externo</Text>
+            </View>
+          </View>
+
+          <View style={styles.tableRow}>
+            <View style={styles.firstColumn}>
+              <Text style={styles.label}>Abertura (%)</Text>
+            </View>
+
+            {['insuflamento', 'retorno', 'arExterno'].map((tipo) => (
+              <View key={tipo} style={styles.otherColumn}>
+                <TextInput
+                  style={styles.input}
+                  value={dampers[tipo].abertura}
+                  onChangeText={(text) => atualizarDamper(tipo, 'abertura', text)}
+                  keyboardType="numeric"
+                  placeholder="Ex.: 85"
+                />
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.tableRow}>
+            <View style={styles.firstColumn}>
+              <Text style={styles.label}>Nº do lacre</Text>
+            </View>
+
+            {['insuflamento', 'retorno', 'arExterno'].map((tipo) => (
+              <View key={tipo} style={styles.otherColumn}>
+                <TextInput
+                  style={styles.input}
+                  value={dampers[tipo].numeroLacre}
+                  onChangeText={(text) => atualizarDamper(tipo, 'numeroLacre', text)}
+                  placeholder="Ex.: 12345 ou N/A"
+                />
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+
+      <TouchableOpacity
+        style={styles.sectionHeader}
+        onPress={() => setMostrarCondicoesOperacao(!mostrarCondicoesOperacao)}
+      >
+        <Text style={styles.sectionTitle}>3.0 Condições de Operação</Text>
+        <Text style={styles.toggleText}>{mostrarCondicoesOperacao ? '−' : '+'}</Text>
+      </TouchableOpacity>
+
+      {mostrarCondicoesOperacao && (
+        <View style={styles.mainSectionBox}>
+          <Text style={styles.label}>
+            3.1 Pressão estática disponível na saída de insuflamento após o ventilador (duto)
+          </Text>
+          <TextInput
+            style={styles.input}
+            value={condicoesOperacao.pressaoSaidaInsuflamento}
+            onChangeText={(text) =>
+              atualizarCondicaoOperacao('pressaoSaidaInsuflamento', text)
+            }
+            keyboardType="numeric"
+            placeholder="Ex.: 350"
+          />
+
+          <Text style={styles.label}>3.2 Pressão estática Total (∆P ventilador)</Text>
+          <TextInput
+            style={styles.input}
+            value={condicoesOperacao.pressaoEstaticaTotal}
+            onChangeText={(text) => atualizarCondicaoOperacao('pressaoEstaticaTotal', text)}
+            keyboardType="numeric"
+            placeholder="Ex.: 520"
+          />
+
+          <Text style={styles.label}>
+            3.3 Pressão estática SIMVA (bocal do ventilador - módulo negativo)
+          </Text>
+          <TextInput
+            style={styles.input}
+            value={condicoesOperacao.pressaoSimva}
+            onChangeText={(text) => atualizarCondicaoOperacao('pressaoSimva', text)}
+            keyboardType="numeric"
+            placeholder="Ex.: -250"
+          />
+
+          <Text style={styles.label}>3.4 Fator k (k = Q / √∆P(SIMVA))</Text>
+          <TextInput
+            style={styles.input}
+            value={fatorK}
+            editable={false}
+            placeholder="Calculado automaticamente"
+            placeholderTextColor="#888"
+          />
+
+          <Text style={styles.infoAuxiliar}>
+            Para o cálculo do fator k, o app utiliza a vazão medida do insuflamento e o módulo
+            da pressão SIMVA.
+          </Text>
+        </View>
+      )}
+
+      <TouchableOpacity
+        style={styles.sectionHeader}
+        onPress={() => setMostrarEletrica(!mostrarEletrica)}
+      >
+        <Text style={styles.sectionTitle}>4.0 Elétrica</Text>
+        <Text style={styles.toggleText}>{mostrarEletrica ? '−' : '+'}</Text>
+      </TouchableOpacity>
+
+      {mostrarEletrica && (
+        <View style={styles.mainSectionBox}>
+          <Text style={styles.label}>Quantidade de motores</Text>
+          <TextInput
+            style={styles.input}
+            value={quantidadeMotores}
+            onChangeText={atualizarQuantidadeMotores}
+            keyboardType="numeric"
+            placeholder="Ex.: 1"
+          />
+
+          {motores.map((motor, index) => {
+            const desequilibrioTensao = calcularDesequilibrio([
+              motor.tensaoRS,
+              motor.tensaoRT,
+              motor.tensaoST,
+            ]);
+
+            const desequilibrioCorrente = calcularDesequilibrio([
+              motor.correnteR,
+              motor.correnteS,
+              motor.correnteT,
+            ]);
+
+            const tensaoNominalNumero = parseNumero(motor.tensaoNominal);
+            const correnteNominalNumero = parseNumero(motor.correnteNominal);
+
+            const tensaoRSNumero = parseNumero(motor.tensaoRS);
+            const tensaoRTNumero = parseNumero(motor.tensaoRT);
+            const tensaoSTNumero = parseNumero(motor.tensaoST);
+
+            const correnteRNumero = parseNumero(motor.correnteR);
+            const correnteSNumero = parseNumero(motor.correnteS);
+            const correnteTNumero = parseNumero(motor.correnteT);
+
+            const tensaoMin =
+              tensaoNominalNumero && tensaoNominalNumero > 0
+                ? tensaoNominalNumero * 0.95
+                : null;
+            const tensaoMax =
+              tensaoNominalNumero && tensaoNominalNumero > 0
+                ? tensaoNominalNumero * 1.05
+                : null;
+
+            const tensaoConforme =
+              tensaoMin !== null &&
+              tensaoMax !== null &&
+              tensaoRSNumero !== null &&
+              tensaoRTNumero !== null &&
+              tensaoSTNumero !== null &&
+              tensaoRSNumero >= tensaoMin &&
+              tensaoRSNumero <= tensaoMax &&
+              tensaoRTNumero >= tensaoMin &&
+              tensaoRTNumero <= tensaoMax &&
+              tensaoSTNumero >= tensaoMin &&
+              tensaoSTNumero <= tensaoMax &&
+              parseNumero(desequilibrioTensao) !== null &&
+              parseNumero(desequilibrioTensao) <= 3;
+
+            const correnteConforme =
+              correnteNominalNumero !== null &&
+              correnteNominalNumero > 0 &&
+              correnteRNumero !== null &&
+              correnteSNumero !== null &&
+              correnteTNumero !== null &&
+              correnteRNumero <= correnteNominalNumero &&
+              correnteSNumero <= correnteNominalNumero &&
+              correnteTNumero <= correnteNominalNumero &&
+              parseNumero(desequilibrioCorrente) !== null &&
+              parseNumero(desequilibrioCorrente) <= 15;
+
+            return (
+              <View key={index} style={styles.subSectionContainer}>
+                <View style={styles.subSectionBox}>
+                  <Text style={styles.subSectionTitle}>Motor {index + 1}</Text>
+
+                  <Text style={styles.label}>4.1 Frequência (% ou Hz)</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={motor.frequencia}
+                    onChangeText={(text) => atualizarMotor(index, 'frequencia', text)}
+                    keyboardType="numeric"
+                  />
+
+                  <Text style={styles.subSectionTitle}>4.2 Tensão elétrica (V)</Text>
+
+                  <Text style={styles.label}>Nominal</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={motor.tensaoNominal}
+                    onChangeText={(text) => atualizarMotor(index, 'tensaoNominal', text)}
+                    keyboardType="numeric"
+                  />
+
+                  <View style={styles.row}>
+                    <View style={styles.thirdInput}>
+                      <Text style={styles.label}>R-S</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={motor.tensaoRS}
+                        onChangeText={(text) => atualizarMotor(index, 'tensaoRS', text)}
+                        keyboardType="numeric"
+                      />
+                    </View>
+
+                    <View style={styles.thirdInput}>
+                      <Text style={styles.label}>R-T</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={motor.tensaoRT}
+                        onChangeText={(text) => atualizarMotor(index, 'tensaoRT', text)}
+                        keyboardType="numeric"
+                      />
+                    </View>
+
+                    <View style={styles.thirdInputNoMargin}>
+                      <Text style={styles.label}>S-T</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={motor.tensaoST}
+                        onChangeText={(text) => atualizarMotor(index, 'tensaoST', text)}
+                        keyboardType="numeric"
+                      />
+                    </View>
+                  </View>
+
+                  <Text style={styles.label}>Desequilíbrio (%)</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={desequilibrioTensao}
+                    editable={false}
+                  />
+
+                  {tensaoConforme ? (
+                    <Text style={styles.resultadoOkInline}>
+                      Tensão conforme: medições dentro de ±5% da nominal e desequilíbrio ≤ 3%.
+                    </Text>
+                  ) : (
+                    <Text style={styles.resultadoAlertaInline}>
+                      Tensão fora do critério: medições devem estar em ±5% da nominal e o
+                      desequilíbrio deve ser ≤ 3%.
+                    </Text>
+                  )}
+
+                  <Text style={styles.subSectionTitle}>4.3 Corrente (A)</Text>
+
+                  <Text style={styles.label}>Nominal</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={motor.correnteNominal}
+                    onChangeText={(text) => atualizarMotor(index, 'correnteNominal', text)}
+                    keyboardType="numeric"
+                  />
+
+                  <View style={styles.row}>
+                    <View style={styles.thirdInput}>
+                      <Text style={styles.label}>R</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={motor.correnteR}
+                        onChangeText={(text) => atualizarMotor(index, 'correnteR', text)}
+                        keyboardType="numeric"
+                      />
+                    </View>
+
+                    <View style={styles.thirdInput}>
+                      <Text style={styles.label}>S</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={motor.correnteS}
+                        onChangeText={(text) => atualizarMotor(index, 'correnteS', text)}
+                        keyboardType="numeric"
+                      />
+                    </View>
+
+                    <View style={styles.thirdInputNoMargin}>
+                      <Text style={styles.label}>T</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={motor.correnteT}
+                        onChangeText={(text) => atualizarMotor(index, 'correnteT', text)}
+                        keyboardType="numeric"
+                      />
+                    </View>
+                  </View>
+
+                  <Text style={styles.label}>Desequilíbrio (%)</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={desequilibrioCorrente}
+                    editable={false}
+                  />
+
+                  {correnteConforme ? (
+                    <Text style={styles.resultadoOkInline}>
+                      Corrente conforme: medições ≤ nominal e desequilíbrio ≤ 15%.
+                    </Text>
+                  ) : (
+                    <Text style={styles.resultadoAlertaInline}>
+                      Corrente fora do critério: medições devem ser ≤ nominal e o desequilíbrio
+                      deve ser ≤ 15%.
+                    </Text>
+                  )}
+                </View>
+              </View>
+            );
           })}
         </View>
       )}
@@ -574,6 +1063,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
 
+  optionButtonLast: {
+    marginRight: 0,
+  },
+
   optionButtonSelected: {
     backgroundColor: '#1D4ED8',
   },
@@ -598,6 +1091,15 @@ const styles = StyleSheet.create({
   },
 
   halfInputNoMargin: {
+    flex: 1,
+  },
+
+  thirdInput: {
+    flex: 1,
+    marginRight: 5,
+  },
+
+  thirdInputNoMargin: {
     flex: 1,
   },
 
@@ -661,6 +1163,20 @@ const styles = StyleSheet.create({
     color: '#444',
   },
 
+  resultadoOkInline: {
+    marginTop: 6,
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#15803D',
+  },
+
+  resultadoAlertaInline: {
+    marginTop: 6,
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#B91C1C',
+  },
+
   inputComentario: {
     borderWidth: 1,
     borderColor: '#ccc',
@@ -668,5 +1184,34 @@ const styles = StyleSheet.create({
     padding: 10,
     backgroundColor: '#f9f9f9',
     minHeight: 90,
+  },
+
+  tableRow: {
+    flexDirection: 'row',
+    marginBottom: 8,
+    alignItems: 'flex-start',
+  },
+
+  firstColumn: {
+    flex: 1.3,
+    paddingRight: 6,
+  },
+
+  otherColumn: {
+    flex: 1,
+    paddingHorizontal: 2,
+  },
+
+  tableHeader: {
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+
+  infoAuxiliar: {
+    marginTop: 8,
+    fontSize: 13,
+    color: '#555',
+    lineHeight: 18,
   },
 });
