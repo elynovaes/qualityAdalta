@@ -1,12 +1,140 @@
 import React, { useMemo, useState } from 'react';
 import {
+  Alert,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from 'react-native';
-import FormScreen from '../../components/FormScreen'; // ajuste o caminho se necessário
+import FormScreen from '../../components/FormScreen';
+
+const SECOES_DUTO = [
+  { id: 'insuflamento', titulo: '1.1 Duto de ar de insuflamento' },
+  { id: 'retorno', titulo: '1.2 Duto de ar de retorno' },
+  { id: 'arExterno', titulo: '1.3 Duto de ar externo' },
+];
+
+const criarSecaoInicial = () => ({
+  larguraDuto: '',
+  alturaDuto: '',
+  vazaoNominal: '',
+  pressaoEstatica: '',
+  comentarioVazao: '',
+  valoresPitot: {},
+  expandida: false,
+});
+
+function parseNumero(valor) {
+  const numero = parseFloat(String(valor).replace(',', '.'));
+  return Number.isNaN(numero) ? null : numero;
+}
+
+function calcularDadosSecao(secao) {
+  const largura = parseNumero(secao.larguraDuto);
+  const altura = parseNumero(secao.alturaDuto);
+  const vazaoNominal = parseNumero(secao.vazaoNominal);
+
+  const areaDutoNumero =
+    largura && altura && largura > 0 && altura > 0 ? largura * altura : null;
+
+  const areaDuto = areaDutoNumero ? areaDutoNumero.toFixed(4) : '';
+
+  let faixaVelocidade = '';
+  if (vazaoNominal && vazaoNominal > 0 && areaDutoNumero) {
+    const velocidadeMedia = (vazaoNominal / 3600) / areaDutoNumero;
+    const velocidadeMin = velocidadeMedia * 0.9;
+    const velocidadeMax = velocidadeMedia * 1.1;
+    faixaVelocidade = `Min: ${velocidadeMin.toFixed(2)} | Máx: ${velocidadeMax.toFixed(2)}`;
+  }
+
+  let calculoPitot = null;
+  if (largura && altura && largura > 0 && altura > 0) {
+    const margem = 0.05;
+    const espacamento = 0.1;
+
+    const nL = Math.floor((largura - 2 * margem) / espacamento) + 1;
+    const nH = Math.floor((altura - 2 * margem) / espacamento) + 1;
+
+    if (nL > 0 && nH > 0) {
+      calculoPitot = {
+        nL,
+        nH,
+        total: nL * nH,
+      };
+    }
+  }
+
+  const matrizPitot = [];
+  if (calculoPitot) {
+    let contador = 1;
+    for (let i = 0; i < calculoPitot.nH; i++) {
+      const linha = [];
+      for (let j = 0; j < calculoPitot.nL; j++) {
+        linha.push(contador);
+        contador++;
+      }
+      matrizPitot.push(linha);
+    }
+  }
+
+  const totalPontosEsperados = calculoPitot?.total || 0;
+
+  const pontosValidos = Object.values(secao.valoresPitot)
+    .map((valor) => parseNumero(valor))
+    .filter((valor) => valor && valor > 0);
+
+  const pontosPreenchidos = pontosValidos.length;
+  const todosPontosPreenchidos =
+    totalPontosEsperados > 0 && pontosPreenchidos === totalPontosEsperados;
+
+  let vazaoMediaCalculada = '';
+  if (areaDutoNumero && todosPontosPreenchidos && pontosValidos.length === totalPontosEsperados) {
+    const soma = pontosValidos.reduce((acc, valor) => acc + valor, 0);
+    const velocidadeMedia = soma / pontosValidos.length;
+    const vazaoMedia = velocidadeMedia * areaDutoNumero * 3600;
+    vazaoMediaCalculada = vazaoMedia.toFixed(2);
+  }
+
+  let percentualVazao = '';
+  const vazaoMediaNumero = parseNumero(vazaoMediaCalculada);
+  if (vazaoNominal && vazaoNominal > 0 && vazaoMediaNumero && vazaoMediaNumero > 0) {
+    const desvioPercentual = ((vazaoMediaNumero - vazaoNominal) / vazaoNominal) * 100;
+    if (Math.abs(desvioPercentual) < 0.05) {
+      percentualVazao = '0%';
+    } else {
+      const sinal = desvioPercentual > 0 ? '+' : '';
+      percentualVazao = `${sinal}${desvioPercentual.toFixed(1)}%`;
+    }
+  }
+
+  let avaliacaoVazao = null;
+  if (todosPontosPreenchidos && vazaoNominal && vazaoNominal > 0 && vazaoMediaNumero && vazaoMediaNumero > 0) {
+    const limiteMin = vazaoNominal * 0.9;
+    const limiteMax = vazaoNominal * 1.1;
+    const conforme = vazaoMediaNumero >= limiteMin && vazaoMediaNumero <= limiteMax;
+
+    avaliacaoVazao = {
+      conforme,
+      limiteMin: limiteMin.toFixed(2),
+      limiteMax: limiteMax.toFixed(2),
+    };
+  }
+
+  return {
+    areaDutoNumero,
+    areaDuto,
+    faixaVelocidade,
+    calculoPitot,
+    matrizPitot,
+    totalPontosEsperados,
+    pontosPreenchidos,
+    todosPontosPreenchidos,
+    vazaoMediaCalculada,
+    percentualVazao,
+    avaliacaoVazao,
+  };
+}
 
 export default function StartupUta() {
   const [mostrarInfo, setMostrarInfo] = useState(false);
@@ -22,69 +150,243 @@ export default function StartupUta() {
   const [balometroSerie, setBalometroSerie] = useState('');
   const [manometroSerie, setManometroSerie] = useState('');
 
-  const [vazaoNominal, setVazaoNominal] = useState('');
-  const [larguraDuto, setLarguraDuto] = useState('');
-  const [alturaDuto, setAlturaDuto] = useState('');
+  const [secoesSelecionadas, setSecoesSelecionadas] = useState(['insuflamento', 'retorno']);
 
-  const [valoresPitot, setValoresPitot] = useState({});
+  const [secoes, setSecoes] = useState({
+    insuflamento: { ...criarSecaoInicial(), expandida: true },
+    retorno: criarSecaoInicial(),
+    arExterno: criarSecaoInicial(),
+  });
 
-  const areaDuto = useMemo(() => {
-    const largura = parseFloat(String(larguraDuto).replace(',', '.'));
-    const altura = parseFloat(String(alturaDuto).replace(',', '.'));
+  const toggleSelecaoSecao = (secaoId) => {
+    setSecoesSelecionadas((prev) => {
+      const jaSelecionada = prev.includes(secaoId);
 
-    if (isNaN(largura) || isNaN(altura)) return '';
-    return (largura * altura).toFixed(4);
-  }, [larguraDuto, alturaDuto]);
-
-  const calculoPitot = useMemo(() => {
-    const largura = parseFloat(String(larguraDuto).replace(',', '.'));
-    const altura = parseFloat(String(alturaDuto).replace(',', '.'));
-
-    if (isNaN(largura) || isNaN(altura)) return null;
-
-    const margem = 0.05;
-    const espacamento = 0.10;
-
-    const nL = Math.floor((largura - 2 * margem) / espacamento) + 1;
-    const nH = Math.floor((altura - 2 * margem) / espacamento) + 1;
-
-    return {
-      nL,
-      nH,
-      total: nL * nH
-    };
-  }, [larguraDuto, alturaDuto]);
-
-  const matrizPitot = useMemo(() => {
-    if (!calculoPitot) return [];
-
-    let contador = 1;
-    const matriz = [];
-
-    for (let i = 0; i < calculoPitot.nH; i++) {
-      const linha = [];
-      for (let j = 0; j < calculoPitot.nL; j++) {
-        linha.push(contador);
-        contador++;
+      if (jaSelecionada) {
+        return prev.filter((id) => id !== secaoId);
       }
-      matriz.push(linha);
-    }
 
-    return matriz;
-  }, [calculoPitot]);
+      if (prev.length >= 2) {
+        Alert.alert('Atenção', 'Você pode selecionar no máximo 2 seções.');
+        return prev;
+      }
 
-  const atualizarValor = (id, valor) => {
-    setValoresPitot((prev) => ({
+      return [...prev, secaoId];
+    });
+  };
+
+  const toggleExpandirSecao = (secaoId) => {
+    setSecoes((prev) => ({
       ...prev,
-      [id]: valor,
+      [secaoId]: {
+        ...prev[secaoId],
+        expandida: !prev[secaoId].expandida,
+      },
     }));
+  };
+
+  const atualizarCampoSecao = (secaoId, campo, valor) => {
+    setSecoes((prev) => ({
+      ...prev,
+      [secaoId]: {
+        ...prev[secaoId],
+        [campo]: valor,
+      },
+    }));
+  };
+
+  const atualizarValorPitot = (secaoId, ponto, valor) => {
+    setSecoes((prev) => ({
+      ...prev,
+      [secaoId]: {
+        ...prev[secaoId],
+        valoresPitot: {
+          ...prev[secaoId].valoresPitot,
+          [ponto]: valor,
+        },
+      },
+    }));
+  };
+
+  const dadosSecoes = useMemo(() => {
+    return {
+      insuflamento: calcularDadosSecao(secoes.insuflamento),
+      retorno: calcularDadosSecao(secoes.retorno),
+      arExterno: calcularDadosSecao(secoes.arExterno),
+    };
+  }, [secoes]);
+
+  const renderSecaoDuto = (secaoId, titulo) => {
+    const secao = secoes[secaoId];
+    const dados = dadosSecoes[secaoId];
+
+    return (
+      <View key={secaoId} style={styles.subSectionContainer}>
+        <TouchableOpacity
+          style={styles.sectionHeaderInterno}
+          onPress={() => toggleExpandirSecao(secaoId)}
+        >
+          <Text style={styles.subSectionTitleHeader}>{titulo}</Text>
+          <Text style={styles.toggleText}>{secao.expandida ? '−' : '+'}</Text>
+        </TouchableOpacity>
+
+        {secao.expandida && (
+          <View style={styles.subSectionBox}>
+            <Text style={styles.label}>Vazão nominal (m³/h)</Text>
+            <TextInput
+              style={styles.input}
+              value={secao.vazaoNominal}
+              onChangeText={(text) => atualizarCampoSecao(secaoId, 'vazaoNominal', text)}
+              keyboardType="numeric"
+            />
+
+            <View style={styles.row}>
+              <View style={styles.halfInput}>
+                <Text style={styles.label}>Largura (m)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={secao.larguraDuto}
+                  onChangeText={(text) => atualizarCampoSecao(secaoId, 'larguraDuto', text)}
+                  keyboardType="numeric"
+                />
+              </View>
+
+              <View style={styles.halfInputNoMargin}>
+                <Text style={styles.label}>Altura (m)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={secao.alturaDuto}
+                  onChangeText={(text) => atualizarCampoSecao(secaoId, 'alturaDuto', text)}
+                  keyboardType="numeric"
+                />
+              </View>
+            </View>
+
+            <View style={styles.row}>
+              <View style={styles.halfInput}>
+                <Text style={styles.label}>Área (m²)</Text>
+                <TextInput style={styles.input} value={dados.areaDuto} editable={false} />
+              </View>
+
+              <View style={styles.halfInputNoMargin}>
+                <Text style={styles.label}>Pontos da matriz</Text>
+                <TextInput
+                  style={styles.input}
+                  value={
+                    dados.calculoPitot
+                      ? `${dados.calculoPitot.nL} x ${dados.calculoPitot.nH} = ${dados.calculoPitot.total}`
+                      : ''
+                  }
+                  editable={false}
+                />
+              </View>
+            </View>
+
+            <Text style={styles.label}>Velocidade de referência (m/s)</Text>
+            <TextInput
+              style={styles.input}
+              value={dados.faixaVelocidade}
+              editable={false}
+            />
+
+            <Text style={styles.subSectionTitle}>Matriz de Medição</Text>
+
+            {dados.matrizPitot.map((linha, i) => (
+              <View key={i} style={styles.row}>
+                {linha.map((ponto) => (
+                  <TextInput
+                    key={ponto}
+                    style={styles.inputMatrix}
+                    value={secao.valoresPitot[ponto] || ''}
+                    onChangeText={(text) => atualizarValorPitot(secaoId, ponto, text)}
+                    keyboardType="numeric"
+                  />
+                ))}
+              </View>
+            ))}
+
+            {dados.totalPontosEsperados > 0 && (
+              <Text style={styles.statusPreenchimento}>
+                Pontos preenchidos: {dados.pontosPreenchidos}/{dados.totalPontosEsperados}
+              </Text>
+            )}
+
+            <Text style={styles.subSectionTitle}>Resultados</Text>
+
+            <View style={styles.row}>
+              <View style={styles.halfInput}>
+                <Text style={styles.label}>Vazão média (m³/h)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={dados.vazaoMediaCalculada}
+                  editable={false}
+                  placeholder={
+                    dados.totalPontosEsperados > 0 && !dados.todosPontosPreenchidos
+                      ? 'Preencha todos os pontos da matriz'
+                      : ''
+                  }
+                  placeholderTextColor="#888"
+                />
+              </View>
+
+              <View style={styles.halfInputNoMargin}>
+                <Text style={styles.label}>Desvio (%)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={dados.percentualVazao}
+                  editable={false}
+                />
+              </View>
+            </View>
+
+            <Text style={styles.label}>Pressão estática (Pa)</Text>
+            <TextInput
+              style={styles.input}
+              value={secao.pressaoEstatica}
+              onChangeText={(text) => atualizarCampoSecao(secaoId, 'pressaoEstatica', text)}
+              keyboardType="numeric"
+              placeholder="Ex.: 180"
+            />
+
+            {dados.avaliacaoVazao && (
+              <View style={styles.resultadoBox}>
+                {dados.avaliacaoVazao.conforme ? (
+                  <Text style={styles.resultadoOk}>
+                    Vazão medida dentro do critério de aceitação (±10% da vazão nominal).
+                  </Text>
+                ) : (
+                  <>
+                    <Text style={styles.resultadoAlerta}>
+                      Vazão medida fora do critério de aceitação.
+                    </Text>
+
+                    <Text style={styles.resultadoInfo}>
+                      Faixa aceitável: {dados.avaliacaoVazao.limiteMin} a {dados.avaliacaoVazao.limiteMax} m³/h
+                    </Text>
+
+                    <Text style={styles.label}>Comentário técnico</Text>
+                    <TextInput
+                      style={styles.inputComentario}
+                      value={secao.comentarioVazao}
+                      onChangeText={(text) => atualizarCampoSecao(secaoId, 'comentarioVazao', text)}
+                      placeholder="Descreva o motivo da vazão estar fora do critério..."
+                      multiline
+                      textAlignVertical="top"
+                    />
+                  </>
+                )}
+              </View>
+            )}
+          </View>
+        )}
+      </View>
+    );
   };
 
   return (
     <FormScreen>
       <Text style={styles.title}>Startup de Unidade de Tratamento - UTA</Text>
 
-      {/* IDENTIFICAÇÃO */}
       <TouchableOpacity
         style={styles.sectionHeader}
         onPress={() => setMostrarInfo(!mostrarInfo)}
@@ -101,7 +403,7 @@ export default function StartupUta() {
               <TextInput style={styles.input} value={dataInspecao} onChangeText={setDataInspecao} />
             </View>
 
-            <View style={styles.halfInput}>
+            <View style={styles.halfInputNoMargin}>
               <Text style={styles.label}>Sistema / Área</Text>
               <TextInput style={styles.input} value={sistemaArea} onChangeText={setSistemaArea} />
             </View>
@@ -113,7 +415,7 @@ export default function StartupUta() {
               <TextInput style={styles.input} value={procedimento} onChangeText={setProcedimento} />
             </View>
 
-            <View style={styles.halfInput}>
+            <View style={styles.halfInputNoMargin}>
               <Text style={styles.label}>Equipamento</Text>
               <TextInput style={styles.input} value={equipamento} onChangeText={setEquipamento} />
             </View>
@@ -133,7 +435,6 @@ export default function StartupUta() {
         </>
       )}
 
-      {/* VAZÃO DE AR */}
       <TouchableOpacity
         style={styles.sectionHeader}
         onPress={() => setMostrarVazaoAr(!mostrarVazaoAr)}
@@ -143,66 +444,34 @@ export default function StartupUta() {
       </TouchableOpacity>
 
       {mostrarVazaoAr && (
-        <View style={styles.subSectionBox}>
+        <View style={styles.mainSectionBox}>
+          <Text style={styles.selectionTitle}>Selecione 2 seções para preenchimento</Text>
+          <Text style={styles.selectionSubtitle}>
+            A seção 1.1 Duto de ar de insuflamento é obrigatória.
+          </Text>
 
-          <Text style={styles.label}>Vazão nominal (m³/h)</Text>
-          <TextInput
-            style={styles.input}
-            value={vazaoNominal}
-            onChangeText={setVazaoNominal}
-            keyboardType="numeric"
-          />
+          <View style={styles.selectionRow}>
+            {SECOES_DUTO.map((item) => {
+              const selecionada = secoesSelecionadas.includes(item.id);
 
-          <Text style={styles.subSectionTitle}>1.1 Duto de ar de insuflamento</Text>
-
-          <View style={styles.row}>
-            <View style={styles.halfInput}>
-              <Text style={styles.label}>Largura (m)</Text>
-              <TextInput
-                style={styles.input}
-                value={larguraDuto}
-                onChangeText={setLarguraDuto}
-                keyboardType="numeric"
-              />
-            </View>
-
-            <View style={styles.halfInput}>
-              <Text style={styles.label}>Altura (m)</Text>
-              <TextInput
-                style={styles.input}
-                value={alturaDuto}
-                onChangeText={setAlturaDuto}
-                keyboardType="numeric"
-              />
-            </View>
+              return (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[styles.optionButton, selecionada && styles.optionButtonSelected]}
+                  onPress={() => toggleSelecaoSecao(item.id)}
+                >
+                  <Text style={[styles.optionButtonText, selecionada && styles.optionButtonTextSelected]}>
+                    {item.id === 'insuflamento' ? '1.1' : item.id === 'retorno' ? '1.2' : '1.3'}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
-          <Text style={styles.label}>Área (m²)</Text>
-          <TextInput style={styles.input} value={areaDuto} editable={false} />
-
-          <Text style={styles.label}>Pontos da matriz</Text>
-          <TextInput
-            style={styles.input}
-            value={calculoPitot ? `${calculoPitot.nL} x ${calculoPitot.nH} = ${calculoPitot.total}` : ''}
-            editable={false}
-          />
-
-          <Text style={styles.subSectionTitle}>Matriz de Medição</Text>
-
-          {matrizPitot.map((linha, i) => (
-            <View key={i} style={styles.row}>
-              {linha.map((ponto) => (
-                <TextInput
-                  key={ponto}
-                  style={styles.inputMatrix}
-                  placeholder=""
-                  value={valoresPitot[ponto] || ''}
-                  onChangeText={(text) => atualizarValor(ponto, text)}
-                  keyboardType="numeric"
-                />
-              ))}
-            </View>
-          ))}
+          {secoesSelecionadas.map((secaoId) => {
+            const item = SECOES_DUTO.find((s) => s.id === secaoId);
+            return renderSecaoDuto(secaoId, item.titulo);
+          })}
         </View>
       )}
     </FormScreen>
@@ -210,7 +479,11 @@ export default function StartupUta() {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 22, fontWeight: '700', marginBottom: 10 },
+  title: {
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 10,
+  },
 
   sectionHeader: {
     flexDirection: 'row',
@@ -219,10 +492,25 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
 
+  sectionHeaderInterno: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
     color: '#1D4ED8',
+  },
+
+  subSectionTitleHeader: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1D4ED8',
+    flex: 1,
+    paddingRight: 8,
   },
 
   toggleText: {
@@ -231,7 +519,7 @@ const styles = StyleSheet.create({
     color: '#1D4ED8',
   },
 
-  subSectionBox: {
+  mainSectionBox: {
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 10,
@@ -239,11 +527,64 @@ const styles = StyleSheet.create({
     backgroundColor: '#fafafa',
   },
 
+  subSectionContainer: {
+    marginTop: 14,
+  },
+
+  subSectionBox: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 10,
+    padding: 12,
+    backgroundColor: '#fff',
+  },
+
   subSectionTitle: {
     fontSize: 15,
     fontWeight: '700',
     marginTop: 10,
     marginBottom: 8,
+  },
+
+  selectionTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+
+  selectionSubtitle: {
+    fontSize: 13,
+    color: '#555',
+    marginBottom: 10,
+  },
+
+  selectionRow: {
+    flexDirection: 'row',
+    marginBottom: 6,
+  },
+
+  optionButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#1D4ED8',
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+    marginRight: 8,
+    backgroundColor: '#fff',
+  },
+
+  optionButtonSelected: {
+    backgroundColor: '#1D4ED8',
+  },
+
+  optionButtonText: {
+    color: '#1D4ED8',
+    fontWeight: '700',
+  },
+
+  optionButtonTextSelected: {
+    color: '#fff',
   },
 
   row: {
@@ -254,6 +595,10 @@ const styles = StyleSheet.create({
   halfInput: {
     flex: 1,
     marginRight: 5,
+  },
+
+  halfInputNoMargin: {
+    flex: 1,
   },
 
   label: {
@@ -279,5 +624,49 @@ const styles = StyleSheet.create({
     margin: 2,
     textAlign: 'center',
     fontSize: 12,
+    backgroundColor: '#fff',
+  },
+
+  statusPreenchimento: {
+    marginTop: 8,
+    fontSize: 13,
+    color: '#555',
+  },
+
+  resultadoBox: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    backgroundColor: '#fff',
+  },
+
+  resultadoOk: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#15803D',
+  },
+
+  resultadoAlerta: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#B91C1C',
+    marginBottom: 4,
+  },
+
+  resultadoInfo: {
+    fontSize: 13,
+    marginBottom: 8,
+    color: '#444',
+  },
+
+  inputComentario: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    padding: 10,
+    backgroundColor: '#f9f9f9',
+    minHeight: 90,
   },
 });
