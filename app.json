@@ -17,7 +17,9 @@
     "slug": "quality-adalta",
     "android": {
       "package": "com.elynovaes.qualityadalta",
-      "softwareKeyboardLayoutMode": "resize"
+      "softwareKeyboardLayoutMode": "resize",
+      "scheme": "qualityadalta",
+      "versionCode": 1
     },
     "extra": {
       "eas": {

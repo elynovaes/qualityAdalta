@@ -28,21 +28,21 @@ export default function Home() {
 
   const router = useRouter();
 
-  function carregarServicos() {
-    setLoading(true);
+  const carregarServicos = async () => {
+    try {
+      setLoading(true);
 
-    getServicos()
-    .then((response) => {
-      setServicos(response.data);
-      setErro("");
-    })
-    .catch(() => {
-      setErro("Erro ao carregar serviços.");
-    })
-    .finally(() => {
-      setLoading(false);
-    });
-  }
+      const dados = await getServicos();
+      console.log('Dados recebidos:', dados);
+
+      setServicos(Array.isArray(dados) ? dados : []);
+    } catch (error) {
+      console.error('Erro ao carregar serviços:', error);
+      setServicos([]);
+    } finally {
+      setLoading(false); // 🔥 ISSO É O QUE ESTÁ FALTANDO
+    }
+  };
 
   function limparFormulario() {
     setOs("");
@@ -147,14 +147,16 @@ export default function Home() {
     setModalVisible(true);
   }
 
-  const servicosFiltrados = servicos.filter((item) => {
-    const texto = busca.toLowerCase();
+  const servicosFiltrados = Array.isArray(servicos)
+  ? servicos.filter((item) => {
+      const texto = busca.toLowerCase();
 
-    return (
-      item.client.toLowerCase().includes(texto) ||
-      item.os.toLowerCase().includes(texto)
-    );
-  });
+      return (
+        item.cliente?.toLowerCase().includes(texto) ||
+        item.os?.toLowerCase().includes(texto)
+      );
+    })
+  : [];
 
   if (loading) {
     return (
