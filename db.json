@@ -231,14 +231,6 @@
       "sector": "CE",
       "system": "Gases Medicinais",
       "delivery_date": "05/07/2025"
-    },
-    {
-      "id": 30,
-      "os": "2027",
-      "client": "Aché",
-      "sector": "CL",
-      "system": "Sala Limpa",
-      "delivery_date": "06/07/2025"
     }
   ]
 }

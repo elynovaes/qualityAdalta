@@ -37,6 +37,20 @@ const criarMotor = () => ({
   correnteT: '',
 });
 
+const criarFiltro = (eficiencia, criterioAceitacao) => ({
+  eficiencia,
+  criterioAceitacao: String(criterioAceitacao),
+  deltaPMedido: '',
+});
+
+const criarAguaGeladaInicial = () => ({
+  modeloValvula: '',
+  aberturaValvulaManual: '',
+  deltaPOperacao: '',
+  vazaoNominal: '',
+  vazaoMedida: '',
+});
+
 function parseNumero(valor) {
   const numero = parseFloat(String(valor).replace(',', '.'));
   return Number.isNaN(numero) ? null : numero;
@@ -184,6 +198,10 @@ export default function StartupUta() {
   const [mostrarDampers, setMostrarDampers] = useState(false);
   const [mostrarCondicoesOperacao, setMostrarCondicoesOperacao] = useState(false);
   const [mostrarEletrica, setMostrarEletrica] = useState(false);
+  const [mostrarPerdaCargaFiltros, setMostrarPerdaCargaFiltros] = useState(false);
+  const [mostrarAguaGelada, setMostrarAguaGelada] = useState(false);
+  const [mostrarObservacoesComentarios, setMostrarObservacoesComentarios] = useState(false);
+  const [observacoesComentarios, setObservacoesComentarios] = useState('');
 
   const [dataInspecao, setDataInspecao] = useState('');
   const [sistemaArea, setSistemaArea] = useState('');
@@ -229,6 +247,14 @@ export default function StartupUta() {
 
   const [quantidadeMotores, setQuantidadeMotores] = useState('1');
   const [motores, setMotores] = useState([criarMotor()]);
+
+  const [filtros, setFiltros] = useState([
+    criarFiltro('G4', 150),
+    criarFiltro('F9', 350),
+    criarFiltro('H14', 600),
+  ]);
+
+  const [aguaGelada, setAguaGelada] = useState(criarAguaGeladaInicial());
 
   const toggleSelecaoSecao = (secaoId) => {
     setSecoesSelecionadas((prev) => {
@@ -328,6 +354,24 @@ export default function StartupUta() {
     });
   };
 
+  const atualizarFiltro = (index, campo, valor) => {
+    setFiltros((prev) => {
+      const novos = [...prev];
+      novos[index] = {
+        ...novos[index],
+        [campo]: valor,
+      };
+      return novos;
+    });
+  };
+
+  const atualizarAguaGelada = (campo, valor) => {
+    setAguaGelada((prev) => ({
+      ...prev,
+      [campo]: valor,
+    }));
+  };
+
   const dadosSecoes = useMemo(() => {
     return {
       insuflamento: calcularDadosSecao(secoes.insuflamento),
@@ -355,6 +399,34 @@ export default function StartupUta() {
     const k = vazaoInsuflamentoNumero / Math.sqrt(deltaPSimva);
     return k.toFixed(4);
   }, [vazaoInsuflamentoNumero, pressaoSimvaNumero]);
+
+  const desvioAguaGelada = useMemo(() => {
+    const vazaoNominal = parseNumero(aguaGelada.vazaoNominal);
+    const vazaoMedida = parseNumero(aguaGelada.vazaoMedida);
+
+    if (!vazaoNominal || vazaoNominal <= 0 || vazaoMedida === null) return '';
+
+    const desvio = ((vazaoMedida - vazaoNominal) / vazaoNominal) * 100;
+    const sinal = desvio > 0 ? '+' : '';
+    return `${sinal}${desvio.toFixed(1)}%`;
+  }, [aguaGelada]);
+
+  const avaliacaoAguaGelada = useMemo(() => {
+    const vazaoNominal = parseNumero(aguaGelada.vazaoNominal);
+    const vazaoMedida = parseNumero(aguaGelada.vazaoMedida);
+
+    if (!vazaoNominal || vazaoNominal <= 0 || vazaoMedida === null) return null;
+
+    const limiteMin = vazaoNominal * 0.9;
+    const limiteMax = vazaoNominal * 1.1;
+    const conforme = vazaoMedida >= limiteMin && vazaoMedida <= limiteMax;
+
+    return {
+      conforme,
+      limiteMin: limiteMin.toFixed(2),
+      limiteMax: limiteMax.toFixed(2),
+    };
+  }, [aguaGelada]);
 
   const renderSecaoDuto = (secaoId, titulo) => {
     const secao = secoes[secaoId];
@@ -798,31 +870,39 @@ export default function StartupUta() {
                 ? tensaoNominalNumero * 1.05
                 : null;
 
-            const tensaoConforme =
-              tensaoMin !== null &&
-              tensaoMax !== null &&
+            const tensaoPreenchida =
+              tensaoNominalNumero !== null &&
+              tensaoNominalNumero > 0 &&
               tensaoRSNumero !== null &&
               tensaoRTNumero !== null &&
               tensaoSTNumero !== null &&
+              parseNumero(desequilibrioTensao) !== null;
+
+            const correntePreenchida =
+              correnteNominalNumero !== null &&
+              correnteNominalNumero > 0 &&
+              correnteRNumero !== null &&
+              correnteSNumero !== null &&
+              correnteTNumero !== null &&
+              parseNumero(desequilibrioCorrente) !== null;
+
+            const tensaoConforme =
+              tensaoPreenchida &&
+              tensaoMin !== null &&
+              tensaoMax !== null &&
               tensaoRSNumero >= tensaoMin &&
               tensaoRSNumero <= tensaoMax &&
               tensaoRTNumero >= tensaoMin &&
               tensaoRTNumero <= tensaoMax &&
               tensaoSTNumero >= tensaoMin &&
               tensaoSTNumero <= tensaoMax &&
-              parseNumero(desequilibrioTensao) !== null &&
               parseNumero(desequilibrioTensao) <= 3;
 
             const correnteConforme =
-              correnteNominalNumero !== null &&
-              correnteNominalNumero > 0 &&
-              correnteRNumero !== null &&
-              correnteSNumero !== null &&
-              correnteTNumero !== null &&
+              correntePreenchida &&
               correnteRNumero <= correnteNominalNumero &&
               correnteSNumero <= correnteNominalNumero &&
               correnteTNumero <= correnteNominalNumero &&
-              parseNumero(desequilibrioCorrente) !== null &&
               parseNumero(desequilibrioCorrente) <= 15;
 
             return (
@@ -887,16 +967,17 @@ export default function StartupUta() {
                     editable={false}
                   />
 
-                  {tensaoConforme ? (
-                    <Text style={styles.resultadoOkInline}>
-                      Tensão conforme: medições dentro de ±5% da nominal e desequilíbrio ≤ 3%.
-                    </Text>
-                  ) : (
-                    <Text style={styles.resultadoAlertaInline}>
-                      Tensão fora do critério: medições devem estar em ±5% da nominal e o
-                      desequilíbrio deve ser ≤ 3%.
-                    </Text>
-                  )}
+                  {tensaoPreenchida &&
+                    (tensaoConforme ? (
+                      <Text style={styles.resultadoOkInline}>
+                        Tensão conforme: medições dentro de ±5% da nominal e desequilíbrio ≤ 3%.
+                      </Text>
+                    ) : (
+                      <Text style={styles.resultadoAlertaInline}>
+                        Tensão fora do critério: medições devem estar em ±5% da nominal e o
+                        desequilíbrio deve ser ≤ 3%.
+                      </Text>
+                    ))}
 
                   <Text style={styles.subSectionTitle}>4.3 Corrente (A)</Text>
 
@@ -947,20 +1028,216 @@ export default function StartupUta() {
                     editable={false}
                   />
 
-                  {correnteConforme ? (
-                    <Text style={styles.resultadoOkInline}>
-                      Corrente conforme: medições ≤ nominal e desequilíbrio ≤ 15%.
-                    </Text>
-                  ) : (
-                    <Text style={styles.resultadoAlertaInline}>
-                      Corrente fora do critério: medições devem ser ≤ nominal e o desequilíbrio
-                      deve ser ≤ 15%.
-                    </Text>
-                  )}
+                  {correntePreenchida &&
+                    (correnteConforme ? (
+                      <Text style={styles.resultadoOkInline}>
+                        Corrente conforme: medições ≤ nominal e desequilíbrio ≤ 15%.
+                      </Text>
+                    ) : (
+                      <Text style={styles.resultadoAlertaInline}>
+                        Corrente fora do critério: medições devem ser ≤ nominal e o desequilíbrio
+                        deve ser ≤ 15%.
+                      </Text>
+                    ))}
                 </View>
               </View>
             );
           })}
+        </View>
+      )}
+
+      <TouchableOpacity
+        style={styles.sectionHeader}
+        onPress={() => setMostrarPerdaCargaFiltros(!mostrarPerdaCargaFiltros)}
+      >
+        <Text style={styles.sectionTitle}>5.0 Perda de Carga dos Filtros</Text>
+        <Text style={styles.toggleText}>{mostrarPerdaCargaFiltros ? '−' : '+'}</Text>
+      </TouchableOpacity>
+
+      {mostrarPerdaCargaFiltros && (
+        <View style={styles.mainSectionBox}>
+          <View style={styles.tableRow}>
+            <View style={styles.filterColumnTipo}>
+              <Text style={styles.tableHeader}>Filtro</Text>
+            </View>
+            <View style={styles.filterColumnCriterio}>
+              <Text style={styles.tableHeader}>Critério (Pa)</Text>
+            </View>
+            <View style={styles.filterColumnDeltaP}>
+              <Text style={styles.tableHeader}>ΔP medido (Pa)</Text>
+            </View>
+          </View>
+
+          {filtros.map((filtro, index) => {
+            const criterioNumero = parseNumero(filtro.criterioAceitacao);
+            const deltaPMedidoNumero = parseNumero(filtro.deltaPMedido);
+
+            const filtroPreenchido = deltaPMedidoNumero !== null;
+            const filtroConforme =
+              filtroPreenchido &&
+              criterioNumero !== null &&
+              deltaPMedidoNumero <= criterioNumero;
+
+            return (
+              <View key={index} style={styles.filtroBox}>
+                <View style={styles.tableRow}>
+                  <View style={styles.filterColumnTipo}>
+                    <TextInput
+                      style={styles.input}
+                      value={filtro.eficiencia}
+                      onChangeText={(text) => atualizarFiltro(index, 'eficiencia', text)}
+                      placeholder="Ex.: G4"
+                    />
+                  </View>
+
+                  <View style={styles.filterColumnCriterio}>
+                    <TextInput
+                      style={styles.input}
+                      value={filtro.criterioAceitacao}
+                      editable={false}
+                    />
+                  </View>
+
+                  <View style={styles.filterColumnDeltaP}>
+                    <TextInput
+                      style={styles.input}
+                      value={filtro.deltaPMedido}
+                      onChangeText={(text) => atualizarFiltro(index, 'deltaPMedido', text)}
+                      keyboardType="numeric"
+                      placeholder="Ex.: 120"
+                    />
+                  </View>
+                </View>
+
+                {filtroPreenchido &&
+                  (filtroConforme ? (
+                    <Text style={styles.resultadoOkInline}>
+                      {filtro.eficiencia || `Filtro ${index + 1}`} conforme: ΔP medido ≤ critério
+                      de aceitação.
+                    </Text>
+                  ) : (
+                    <Text style={styles.resultadoAlertaInline}>
+                      {filtro.eficiencia || `Filtro ${index + 1}`} não conforme: ΔP medido acima
+                      do critério de aceitação.
+                    </Text>
+                  ))}
+              </View>
+            );
+          })}
+        </View>
+      )}
+
+      <TouchableOpacity
+        style={styles.sectionHeader}
+        onPress={() => setMostrarAguaGelada(!mostrarAguaGelada)}
+      >
+        <Text style={styles.sectionTitle}>6.0 Água Gelada</Text>
+        <Text style={styles.toggleText}>{mostrarAguaGelada ? '−' : '+'}</Text>
+      </TouchableOpacity>
+
+      {mostrarAguaGelada && (
+        <View style={styles.mainSectionBox}>
+          <Text style={styles.label}>Modelo da válvula</Text>
+          <TextInput
+            style={styles.input}
+            value={aguaGelada.modeloValvula}
+            onChangeText={(text) => atualizarAguaGelada('modeloValvula', text)}
+            placeholder="Ex.: TA-Modulator, PICV, Globo 2 vias..."
+          />
+
+          <Text style={styles.label}>Abertura da válvula manual (voltas)</Text>
+          <TextInput
+            style={styles.input}
+            value={aguaGelada.aberturaValvulaManual}
+            onChangeText={(text) => atualizarAguaGelada('aberturaValvulaManual', text)}
+            keyboardType="numeric"
+            placeholder="Ex.: 80"
+          />
+
+          <Text style={styles.label}>Delta P de operação (bar)</Text>
+          <TextInput
+            style={styles.input}
+            value={aguaGelada.deltaPOperacao}
+            onChangeText={(text) => atualizarAguaGelada('deltaPOperacao', text)}
+            keyboardType="numeric"
+            placeholder="Ex.: 0,35"
+          />
+
+          <View style={styles.row}>
+            <View style={styles.halfInput}>
+              <Text style={styles.label}>Vazão nominal (m³/h)</Text>
+              <TextInput
+                style={styles.input}
+                value={aguaGelada.vazaoNominal}
+                onChangeText={(text) => atualizarAguaGelada('vazaoNominal', text)}
+                keyboardType="numeric"
+                placeholder="Ex.: 12,5"
+              />
+            </View>
+
+            <View style={styles.halfInputNoMargin}>
+              <Text style={styles.label}>Vazão medida (m³/h)</Text>
+              <TextInput
+                style={styles.input}
+                value={aguaGelada.vazaoMedida}
+                onChangeText={(text) => atualizarAguaGelada('vazaoMedida', text)}
+                keyboardType="numeric"
+                placeholder="Ex.: 11,8"
+              />
+            </View>
+          </View>
+
+          <Text style={styles.label}>Desvio (%)</Text>
+          <TextInput
+            style={styles.input}
+            value={desvioAguaGelada}
+            editable={false}
+            placeholder="Calculado automaticamente"
+            placeholderTextColor="#888"
+          />
+
+          {avaliacaoAguaGelada && (
+            <View style={styles.resultadoBox}>
+              {avaliacaoAguaGelada.conforme ? (
+                <Text style={styles.resultadoOk}>
+                  Vazão medida dentro do critério de aceitação (±10% da vazão nominal).
+                </Text>
+              ) : (
+                <>
+                  <Text style={styles.resultadoAlerta}>
+                    Vazão medida fora do critério de aceitação.
+                  </Text>
+
+                  <Text style={styles.resultadoInfo}>
+                    Faixa aceitável: {avaliacaoAguaGelada.limiteMin} a{' '}
+                    {avaliacaoAguaGelada.limiteMax} m³/h
+                  </Text>
+                </>
+              )}
+            </View>
+          )}
+        </View>
+      )}
+
+      <TouchableOpacity
+        style={styles.sectionHeader}
+        onPress={() => setMostrarObservacoesComentarios(!mostrarObservacoesComentarios)}
+      >
+        <Text style={styles.sectionTitle}>7.0 Observações e Comentários</Text>
+        <Text style={styles.toggleText}>{mostrarObservacoesComentarios ? '−' : '+'}</Text>
+      </TouchableOpacity>
+
+      {mostrarObservacoesComentarios && (
+        <View style={styles.mainSectionBox}>
+          <Text style={styles.label}>Observações do técnico</Text>
+          <TextInput
+            style={styles.inputComentario}
+            value={observacoesComentarios}
+            onChangeText={setObservacoesComentarios}
+            placeholder="Insira aqui observações, comentários técnicos, desvios identificados ou recomendações."
+            multiline
+            textAlignVertical="top"
+          />
         </View>
       )}
     </FormScreen>
@@ -1213,5 +1490,28 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#555',
     lineHeight: 18,
+  },
+
+  filtroBox: {
+    marginTop: 6,
+    marginBottom: 8,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e5e5',
+  },
+
+  filterColumnTipo: {
+    flex: 1.1,
+    paddingHorizontal: 2,
+  },
+
+  filterColumnCriterio: {
+    flex: 1,
+    paddingHorizontal: 2,
+  },
+
+  filterColumnDeltaP: {
+    flex: 1.1,
+    paddingHorizontal: 2,
   },
 });
