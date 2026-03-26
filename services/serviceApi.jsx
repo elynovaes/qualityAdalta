@@ -36,12 +36,65 @@ export async function getServicos() {
 
   const data = await response.json();
 
-  console.log('Status:', response.status);
-  console.log('Resposta Supabase:', data);
-
   if (!response.ok) {
     throw new Error(JSON.stringify(data));
   }
 
   return data;
+}
+
+export async function createServico(novoServico) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/servicos`, {
+    method: 'POST',
+    headers: {
+      ...headers,
+      Prefer: 'return=representation',
+    },
+    body: JSON.stringify([novoServico]),
+  });
+
+  const data = await response.json();
+
+  console.log("STATUS createServico:", response.status);
+  console.log("DATA createServico:", data);
+  console.log("NOVO SERVIÇO ENVIADO:", novoServico);
+
+  if (!response.ok) {
+    throw new Error(JSON.stringify(data));
+  }
+
+  return Array.isArray(data) ? data[0] : data;
+}
+
+export async function updateServico(id, osAtualizada) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/servicos?id=eq.${id}`, {
+    method: 'PATCH',
+    headers: {
+      ...headers,
+      Prefer: 'return=representation',
+    },
+    body: JSON.stringify(osAtualizada),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(JSON.stringify(data));
+  }
+
+  return data[0];
+}
+
+export async function deleteServico(id) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/servicos?id=eq.${id}`, {
+    method: 'DELETE',
+    headers,
+  });
+
+  if (!response.ok) {
+    const data = await response.json();
+    throw new Error(JSON.stringify(data));
+  }
+
+  return true;
 }

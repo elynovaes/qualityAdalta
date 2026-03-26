@@ -1,12 +1,24 @@
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, StyleSheet, Text } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  StyleSheet,
+  Text,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
 import AddServiceButton from "../components/AddServiceButton";
 import NewServiceModal from "../components/NewServiceModal";
 import SearchBar from "../components/SearchBar";
 import ServiceCard from "../components/ServiceCard";
-import { createServico, deleteServico, getServicos, updateServico } from "../services/serviceApi";
+import {
+  createServico,
+  deleteServico,
+  getServicos,
+  updateServico,
+} from "../services/serviceApi";
 
 export default function Home() {
   const [servicos, setServicos] = useState([]);
@@ -22,25 +34,27 @@ export default function Home() {
   const [system, setSystem] = useState("");
   const [deliveryDate, setDeliveryDate] = useState("");
 
+  const router = useRouter();
+
   useEffect(() => {
     carregarServicos();
   }, []);
 
-  const router = useRouter();
-
   const carregarServicos = async () => {
     try {
       setLoading(true);
+      setErro("");
 
       const dados = await getServicos();
-      console.log('Dados recebidos:', dados);
+      console.log("Dados recebidos:", dados);
 
       setServicos(Array.isArray(dados) ? dados : []);
     } catch (error) {
-      console.error('Erro ao carregar serviços:', error);
+      console.error("Erro ao carregar serviços:", error);
+      setErro("Não foi possível carregar os serviços.");
       setServicos([]);
     } finally {
-      setLoading(false); // 🔥 ISSO É O QUE ESTÁ FALTANDO
+      setLoading(false);
     }
   };
 
@@ -54,57 +68,54 @@ export default function Home() {
 
   function fecharModal() {
     limparFormulario();
+    setEditingId(null);
     setModalVisible(false);
   }
 
-  function salvarServico() {
+  function abrirNovoServico() {
+    limparFormulario();
+    setEditingId(null);
+    setModalVisible(true);
+  }
 
-  const dados = {
+  function salvarServico() {
+    const dados = {
     os,
     client,
     sector,
     system,
     delivery_date: deliveryDate,
-  };
+    };
 
-  if (editingId) {
+    console.log("Dados enviados:", dados);
+    console.log("editingId:", editingId);
 
-    updateServico(editingId, dados)
-      .then(() => {
-
-        setServicos((prev) =>
-          prev.map((item) =>
-            item.id === editingId ? { ...item, ...dados } : item
-          )
-        );
-
-        setEditingId(null);
-        fecharModal();
-
-      })
-      .catch(() => {
-        Alert.alert("Erro", "Não foi possível atualizar.");
-      });
-
-  } else {
-
-    createServico(dados)
-      .then((response) => {
-
-        setServicos((prev) => [response.data, ...prev]);
-
-        fecharModal();
-
-      })
-      .catch(() => {
-        Alert.alert("Erro", "Não foi possível criar.");
-      });
-
+    if (editingId) {
+      updateServico(editingId, dados)
+        .then(async (servicoAtualizado) => {
+          console.log("Serviço atualizado:", servicoAtualizado);
+          await carregarServicos();
+          fecharModal();
+        })
+        .catch((error) => {
+          console.log("Erro ao atualizar serviço:", error);
+          Alert.alert("Erro", error?.message || "Não foi possível atualizar.");
+        });
+    } else {
+      createServico(dados)
+        .then(async (novoServico) => {
+          console.log("Serviço criado:", novoServico);
+          await carregarServicos();
+          fecharModal();
+        })
+        .catch((error) => {
+          console.log("Erro ao criar serviço:", error);
+          Alert.alert("Erro", error?.message || "Não foi possível criar.");
+        });
+    }
   }
-}
 
   function removerServico(id) {
-
     Alert.alert(
       "Excluir serviço",
       "Tem certeza que deseja excluir esta OS?",
@@ -114,49 +125,40 @@ export default function Home() {
           text: "Excluir",
           style: "destructive",
           onPress: () => {
-
             deleteServico(id)
-              .then(() => {
-
-                setServicos((prev) =>
-                  prev.filter((servico) => servico.id !== id)
-                );
-
+              .then(async () => {
+                await carregarServicos();
               })
-              .catch(() => {
-                Alert.alert("Erro", "Não foi possível excluir.");
+              .catch((error) => {
+                console.log("Erro ao excluir serviço:", error);
+                Alert.alert("Erro", error?.message || "Não foi possível excluir.");
               });
-
-          }
-        }
+          },
+        },
       ]
     );
-
   }
 
   function editarServico(servico) {
-
     setEditingId(servico.id);
-
-    setOs(servico.os);
-    setClient(servico.client);
-    setSector(servico.sector);
-    setSystem(servico.system);
-    setDeliveryDate(servico.delivery_date);
-
+    setOs(servico.os || "");
+    setClient(servico.client || "");
+    setSector(servico.sector || "");
+    setSystem(servico.system || "");
+    setDeliveryDate(servico.delivery_date || "");
     setModalVisible(true);
   }
 
-  const servicosFiltrados = Array.isArray(servicos)
-  ? servicos.filter((item) => {
-      const texto = busca.toLowerCase();
+  const texto = (busca || "").toLowerCase();
 
-      return (
-        item.cliente?.toLowerCase().includes(texto) ||
-        item.os?.toLowerCase().includes(texto)
-      );
-    })
-  : [];
+  const servicosFiltrados = servicos.filter((item) => {
+    if (!item) return false;
+
+    const clientTexto = (item.client || "").toLowerCase();
+    const osTexto = (item.os || "").toLowerCase();
+
+    return clientTexto.includes(texto) || osTexto.includes(texto);
+  });
 
   if (loading) {
     return (
@@ -179,7 +181,7 @@ export default function Home() {
     <SafeAreaView style={styles.container}>
       <SearchBar value={busca} onChangeText={setBusca} />
 
-      <AddServiceButton onPress={() => setModalVisible(true)} />
+      <AddServiceButton onPress={abrirNovoServico} />
 
       <FlatList
         data={servicosFiltrados}
@@ -204,6 +206,12 @@ export default function Home() {
             onEdit={() => editarServico(item)}
           />
         )}
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>Nenhuma OS encontrada.</Text>
+        }
+        contentContainerStyle={
+          servicosFiltrados.length === 0 ? styles.emptyContainer : null
+        }
       />
 
       <NewServiceModal
@@ -235,5 +243,14 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  emptyContainer: {
+    flexGrow: 1,
+    justifyContent: "center",
+  },
+  emptyText: {
+    textAlign: "center",
+    fontSize: 16,
+    color: "#666",
   },
 });
