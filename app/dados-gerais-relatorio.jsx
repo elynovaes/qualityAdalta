@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -23,8 +23,12 @@ export default function DadosGeraisRelatorio() {
     }
   }, [params.selectedReports]);
 
-  const selectedReportObjects = REPORT_TYPES.filter((report) =>
-    selectedReports.includes(report.id)
+  const selectedReportObjects = useMemo(
+    () =>
+      REPORT_TYPES.filter((report) =>
+        selectedReports.includes(report.id)
+      ),
+    [selectedReports]
   );
 
   const [form, setForm] = useState({
@@ -44,32 +48,13 @@ export default function DadosGeraisRelatorio() {
 
   const [reportCodes, setReportCodes] = useState([]);
 
-  useEffect(() => {
-    if (form.systems_quantity) {
-      const updatedCodes = buildReportCodes(
-        form.systems_quantity,
-        selectedReportObjects,
-        []
-      );
-
-      setReportCodes(updatedCodes);
-    }
-  }, []);
-
-  function updateField(field, value) {
-    setForm((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  }
-
-  function generateTestCode(index) {
+  const generateTestCode = useCallback((index) => {
     const base = 197 + index;
     const formatted = String(base).padStart(4, "0");
     return `ADR 2558-26-${formatted}`;
-  }
+  }, []);
 
-  function buildReportCodes(quantity, reports, previousCodes = []) {
+  const buildReportCodes = useCallback((quantity, reports, previousCodes = []) => {
     const totalSystems = Number(quantity);
 
     if (!totalSystems || totalSystems < 1) {
@@ -100,6 +85,21 @@ export default function DadosGeraisRelatorio() {
     }
 
     return nextCodes;
+  }, [generateTestCode]);
+
+  useEffect(() => {
+    if (!form.systems_quantity) return;
+
+    setReportCodes((prev) =>
+      buildReportCodes(form.systems_quantity, selectedReportObjects, prev)
+    );
+  }, [buildReportCodes, form.systems_quantity, selectedReportObjects]);
+
+  function updateField(field, value) {
+    setForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
   }
 
   function handleSystemsQuantityChange(value) {

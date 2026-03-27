@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -13,18 +13,10 @@ import AddServiceButton from "../components/AddServiceButton";
 import NewServiceModal from "../components/NewServiceModal";
 import SearchBar from "../components/SearchBar";
 import ServiceCard from "../components/ServiceCard";
-import {
-  createServico,
-  deleteServico,
-  getServicos,
-  updateServico,
-} from "../services/serviceApi";
+import useServicos from "../hooks/useServicos";
+import { logger } from "../utils/logger";
 
 export default function Home() {
-  const [servicos, setServicos] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [erro, setErro] = useState("");
-  const [busca, setBusca] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
   const [editingId, setEditingId] = useState(null);
 
@@ -33,30 +25,17 @@ export default function Home() {
   const [sector, setSector] = useState("");
   const [system, setSystem] = useState("");
   const [deliveryDate, setDeliveryDate] = useState("");
+  const {
+    servicosFiltrados,
+    loading,
+    erro,
+    busca,
+    setBusca,
+    salvarServico,
+    removerServico,
+  } = useServicos();
 
   const router = useRouter();
-
-  useEffect(() => {
-    carregarServicos();
-  }, []);
-
-  const carregarServicos = async () => {
-    try {
-      setLoading(true);
-      setErro("");
-
-      const dados = await getServicos();
-      console.log("Dados recebidos:", dados);
-
-      setServicos(Array.isArray(dados) ? dados : []);
-    } catch (error) {
-      console.error("Erro ao carregar serviços:", error);
-      setErro("Não foi possível carregar os serviços.");
-      setServicos([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   function limparFormulario() {
     setOs("");
@@ -78,44 +57,25 @@ export default function Home() {
     setModalVisible(true);
   }
 
-  function salvarServico() {
+  async function onSalvarServico() {
     const dados = {
-    os,
-    client,
-    sector,
-    system,
-    delivery_date: deliveryDate,
+      os,
+      client,
+      sector,
+      system,
+      delivery_date: deliveryDate,
     };
 
-    console.log("Dados enviados:", dados);
-    console.log("editingId:", editingId);
-
-    if (editingId) {
-      updateServico(editingId, dados)
-        .then(async (servicoAtualizado) => {
-          console.log("Serviço atualizado:", servicoAtualizado);
-          await carregarServicos();
-          fecharModal();
-        })
-        .catch((error) => {
-          console.log("Erro ao atualizar serviço:", error);
-          Alert.alert("Erro", error?.message || "Não foi possível atualizar.");
-        });
-    } else {
-      createServico(dados)
-        .then(async (novoServico) => {
-          console.log("Serviço criado:", novoServico);
-          await carregarServicos();
-          fecharModal();
-        })
-        .catch((error) => {
-          console.log("Erro ao criar serviço:", error);
-          Alert.alert("Erro", error?.message || "Não foi possível criar.");
-        });
+    try {
+      await salvarServico(editingId, dados);
+      fecharModal();
+    } catch (error) {
+      logger.error("Erro ao salvar serviço:", error);
+      Alert.alert("Erro", error?.message || "Não foi possível salvar.");
     }
   }
 
-  function removerServico(id) {
+  function confirmarRemocaoServico(id) {
     Alert.alert(
       "Excluir serviço",
       "Tem certeza que deseja excluir esta OS?",
@@ -124,15 +84,13 @@ export default function Home() {
         {
           text: "Excluir",
           style: "destructive",
-          onPress: () => {
-            deleteServico(id)
-              .then(async () => {
-                await carregarServicos();
-              })
-              .catch((error) => {
-                console.log("Erro ao excluir serviço:", error);
-                Alert.alert("Erro", error?.message || "Não foi possível excluir.");
-              });
+          onPress: async () => {
+            try {
+              await removerServico(id);
+            } catch (error) {
+              logger.error("Erro ao excluir serviço:", error);
+              Alert.alert("Erro", error?.message || "Não foi possível excluir.");
+            }
           },
         },
       ]
@@ -148,17 +106,6 @@ export default function Home() {
     setDeliveryDate(servico.delivery_date || "");
     setModalVisible(true);
   }
-
-  const texto = (busca || "").toLowerCase();
-
-  const servicosFiltrados = servicos.filter((item) => {
-    if (!item) return false;
-
-    const clientTexto = (item.client || "").toLowerCase();
-    const osTexto = (item.os || "").toLowerCase();
-
-    return clientTexto.includes(texto) || osTexto.includes(texto);
-  });
 
   if (loading) {
     return (
@@ -202,7 +149,7 @@ export default function Home() {
                 },
               })
             }
-            onDelete={() => removerServico(item.id)}
+            onDelete={() => confirmarRemocaoServico(item.id)}
             onEdit={() => editarServico(item)}
           />
         )}
@@ -217,7 +164,7 @@ export default function Home() {
       <NewServiceModal
         visible={modalVisible}
         onClose={fecharModal}
-        onSave={salvarServico}
+        onSave={onSalvarServico}
         os={os}
         setOs={setOs}
         client={client}

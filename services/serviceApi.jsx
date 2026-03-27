@@ -20,17 +20,19 @@ export function updateServico(id, servicoAtualizado) {
   return axios.put(`${API_URL}/${id}`, servicoAtualizado);
 } */
 
-const SUPABASE_URL = 'https://pkddscxgogkwuulziylk.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBrZGRzY3hnb2drd3V1bHppeWxrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyMjgxMDgsImV4cCI6MjA4OTgwNDEwOH0.zDXJ-8wSJQ7CUCZPEUYg44pmvwXfGx8B1Vitj7DMt4o';
+import { getSupabaseConfigOrThrow } from '../constants/env';
+import { logger } from '../utils/logger';
+
+const { supabaseUrl, supabaseAnonKey } = getSupabaseConfigOrThrow();
 
 const headers = {
-  apikey: SUPABASE_KEY,
-  Authorization: `Bearer ${SUPABASE_KEY}`,
+  apikey: supabaseAnonKey,
+  Authorization: `Bearer ${supabaseAnonKey}`,
   'Content-Type': 'application/json',
 };
 
 export async function getServicos() {
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/servicos?select=*`, {
+  const response = await fetch(`${supabaseUrl}/rest/v1/servicos?select=*`, {
     headers,
   });
 
@@ -44,7 +46,7 @@ export async function getServicos() {
 }
 
 export async function createServico(novoServico) {
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/servicos`, {
+  const response = await fetch(`${supabaseUrl}/rest/v1/servicos`, {
     method: 'POST',
     headers: {
       ...headers,
@@ -55,9 +57,9 @@ export async function createServico(novoServico) {
 
   const data = await response.json();
 
-  console.log("STATUS createServico:", response.status);
-  console.log("DATA createServico:", data);
-  console.log("NOVO SERVIÇO ENVIADO:", novoServico);
+  logger.info('STATUS createServico:', response.status);
+  logger.info('DATA createServico:', data);
+  logger.info('NOVO SERVIÇO ENVIADO:', novoServico);
 
   if (!response.ok) {
     throw new Error(JSON.stringify(data));
@@ -67,7 +69,7 @@ export async function createServico(novoServico) {
 }
 
 export async function updateServico(id, osAtualizada) {
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/servicos?id=eq.${id}`, {
+  const response = await fetch(`${supabaseUrl}/rest/v1/servicos?id=eq.${id}`, {
     method: 'PATCH',
     headers: {
       ...headers,
@@ -86,7 +88,7 @@ export async function updateServico(id, osAtualizada) {
 }
 
 export async function deleteServico(id) {
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/servicos?id=eq.${id}`, {
+  const response = await fetch(`${supabaseUrl}/rest/v1/servicos?id=eq.${id}`, {
     method: 'DELETE',
     headers,
   });
