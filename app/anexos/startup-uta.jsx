@@ -19,17 +19,52 @@ import SectionVazaoAr from '../../components/startup-uta/SectionVazaoAr';
 import baseStyles from '../../components/startup-uta/styles';
 
 import useStartupUTA from '../../hooks/useStartupUta';
+import { createStartupUta } from '../../services/startupUtaApi';
 import { calcularDesequilibrio } from '../../utils/calcDesequilibrio';
+import { gerarPdfStartup } from '../../utils/startupUtaPdf';
 
 export default function StartupUta() {
   const form = useStartupUTA();
 
-  const handleSalvar = () => {
-    const payload = form.getPayload();
+  const handleSalvar = async () => {
+    try {
+      const payload = form.getPayload();
 
-    console.log('Payload Startup UTA:', payload);
+      const registro = {
+        os: '',
+        client: '',
+        system: payload?.identificacao?.sistemaArea || '',
+        sector: '',
+        equipment: payload?.identificacao?.equipamento || '',
+        tecnico: payload?.identificacao?.tecnico || '',
+        data_inspecao: payload?.identificacao?.dataInspecao || '',
+        payload,
+      };
 
-    Alert.alert('Sucesso', 'Dados do Startup UTA preparados com sucesso.');
+      const salvo = await createStartupUta(registro);
+
+      console.log('Startup UTA salva:', salvo);
+
+      Alert.alert('Sucesso', 'Dados da Startup UTA salvos com sucesso.');
+    } catch (error) {
+      console.error('Erro ao salvar Startup UTA:', error);
+      Alert.alert('Erro', 'Não foi possível salvar os dados.');
+    }
+  };
+
+  const handleGerarPdf = async () => {
+    try {
+      const payload = form.getPayload();
+
+      const uri = await gerarPdfStartup(payload);
+
+      console.log('PDF gerado em:', uri);
+
+      Alert.alert('Sucesso', 'PDF gerado com sucesso.');
+    } catch (error) {
+      console.error('Erro ao gerar PDF da Startup UTA:', error);
+      Alert.alert('Erro', 'Não foi possível gerar o PDF.');
+    }
   };
 
   return (
@@ -202,6 +237,20 @@ export default function StartupUta() {
             Salvar formulário
           </Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            baseStyles.saveButton,
+            styles.saveButtonEnhanced,
+            styles.pdfButton,
+          ]}
+          onPress={handleGerarPdf}
+          activeOpacity={0.85}
+        >
+          <Text style={[baseStyles.saveButtonText, styles.saveButtonEnhancedText]}>
+            Gerar PDF
+          </Text>
+        </TouchableOpacity>
       </View>
     </FormScreen>
   );
@@ -366,5 +415,8 @@ const styles = StyleSheet.create({
   saveButtonEnhancedText: {
     fontSize: 16,
     fontWeight: '700',
+  },
+  pdfButton: {
+    marginTop: 12,
   },
 });
