@@ -2,7 +2,6 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Modal,
   Pressable,
@@ -37,6 +36,9 @@ export default function Home() {
   const [feedbackTitle, setFeedbackTitle] = useState("");
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [feedbackType, setFeedbackType] = useState("info");
+
+  const [deleteVisible, setDeleteVisible] = useState(false);
+  const [selectedDeleteId, setSelectedDeleteId] = useState(null);
 
   const {
     servicosFiltrados,
@@ -199,30 +201,31 @@ export default function Home() {
   }
 
   function confirmarRemocaoServico(id) {
-    Alert.alert(
-      "Excluir serviço",
-      "Tem certeza que deseja excluir esta OS?",
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Excluir",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await removerServico(id);
-              showFeedback("Sucesso", "OS excluída com sucesso.", "success");
-            } catch (error) {
-              logger.error("Erro ao excluir serviço:", error);
-              showFeedback(
-                "Erro",
-                error?.message || "Não foi possível excluir.",
-                "error"
-              );
-            }
-          },
-        },
-      ]
-    );
+    setSelectedDeleteId(id);
+    setDeleteVisible(true);
+  }
+
+  function fecharDeleteModal() {
+    setDeleteVisible(false);
+    setSelectedDeleteId(null);
+  }
+
+  async function executarRemocaoServico() {
+    if (!selectedDeleteId) return;
+
+    try {
+      await removerServico(selectedDeleteId);
+      fecharDeleteModal();
+      showFeedback("Sucesso", "OS excluída com sucesso.", "success");
+    } catch (error) {
+      logger.error("Erro ao excluir serviço:", error);
+      fecharDeleteModal();
+      showFeedback(
+        "Erro",
+        error?.message || "Não foi possível excluir.",
+        "error"
+      );
+    }
   }
 
   function editarServico(servico) {
@@ -341,6 +344,42 @@ export default function Home() {
           </View>
         </View>
       </Modal>
+
+      <Modal
+        visible={deleteVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={fecharDeleteModal}
+      >
+        <View style={styles.deleteOverlay}>
+          <View style={styles.deleteBox}>
+            <View style={styles.deleteIconCircle}>
+              <Text style={styles.deleteIcon}>🗑️</Text>
+            </View>
+
+            <Text style={styles.deleteTitle}>Confirmar exclusão</Text>
+            <Text style={styles.deleteMessage}>
+              Tem certeza que deseja excluir esta OS?
+            </Text>
+
+            <View style={styles.deleteButtonRow}>
+              <Pressable
+                style={styles.deleteCancelButton}
+                onPress={fecharDeleteModal}
+              >
+                <Text style={styles.deleteCancelText}>Cancelar</Text>
+              </Pressable>
+
+              <Pressable
+                style={styles.deleteConfirmButton}
+                onPress={executarRemocaoServico}
+              >
+                <Text style={styles.deleteConfirmText}>Excluir</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -435,6 +474,82 @@ const styles = StyleSheet.create({
     backgroundColor: "#0E5A8A",
   },
   feedbackButtonText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 15,
+  },
+
+  deleteOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  deleteBox: {
+    width: "100%",
+    maxWidth: 360,
+    backgroundColor: "#fff",
+    borderRadius: 22,
+    padding: 24,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+    elevation: 10,
+  },
+  deleteIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#FEE2E2",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  deleteIcon: {
+    fontSize: 28,
+  },
+  deleteTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: 10,
+    textAlign: "center",
+  },
+  deleteMessage: {
+    fontSize: 15,
+    color: "#4B5563",
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 22,
+  },
+  deleteButtonRow: {
+    width: "100%",
+    flexDirection: "row",
+    gap: 12,
+  },
+  deleteCancelButton: {
+    flex: 1,
+    backgroundColor: "#E5E7EB",
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  deleteConfirmButton: {
+    flex: 1,
+    backgroundColor: "#DC2626",
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  deleteCancelText: {
+    color: "#374151",
+    fontWeight: "600",
+    fontSize: 15,
+  },
+  deleteConfirmText: {
     color: "#fff",
     fontWeight: "700",
     fontSize: 15,

@@ -2,14 +2,16 @@ import { StyleSheet } from 'react-native';
 
 const styles = StyleSheet.create({
   title: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700',
-    marginBottom: 10,
+    color: '#0E5A8A',
+    marginBottom: 12,
   },
 
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginTop: 20,
     marginBottom: 10,
   },
@@ -18,13 +20,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
   },
 
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
-    color: '#1D4ED8',
+    color: '#0E5A8A',
   },
 
   subSectionTitleHeader: {
@@ -33,20 +35,26 @@ const styles = StyleSheet.create({
     color: '#1D4ED8',
     flex: 1,
     paddingRight: 8,
+    lineHeight: 21,
   },
 
   toggleText: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700',
     color: '#1D4ED8',
   },
 
   mainSectionBox: {
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 10,
-    padding: 12,
-    backgroundColor: '#fafafa',
+    borderColor: '#E5E7EB',
+    borderRadius: 16,
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
   },
 
   subSectionContainer: {
@@ -55,45 +63,53 @@ const styles = StyleSheet.create({
 
   subSectionBox: {
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 10,
-    padding: 12,
-    backgroundColor: '#fff',
+    borderColor: '#E5E7EB',
+    borderRadius: 14,
+    padding: 14,
+    backgroundColor: '#F9FAFB',
   },
 
   subSectionTitle: {
     fontSize: 15,
     fontWeight: '700',
+    color: '#111827',
     marginTop: 10,
     marginBottom: 8,
+  },
+
+  fieldBlock: {
+    marginBottom: 12,
   },
 
   selectionTitle: {
     fontSize: 15,
     fontWeight: '700',
+    color: '#111827',
     marginBottom: 4,
   },
 
   selectionSubtitle: {
     fontSize: 13,
-    color: '#555',
+    color: '#6B7280',
     marginBottom: 10,
+    lineHeight: 19,
   },
 
   selectionRow: {
     flexDirection: 'row',
-    marginBottom: 6,
+    marginBottom: 8,
   },
 
   optionButton: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#1D4ED8',
-    borderRadius: 8,
-    paddingVertical: 10,
+    borderColor: '#BFDBFE',
+    borderRadius: 10,
+    paddingVertical: 11,
     alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 8,
-    backgroundColor: '#fff',
+    backgroundColor: '#EFF6FF',
   },
 
   optionButtonLast: {
@@ -102,25 +118,27 @@ const styles = StyleSheet.create({
 
   optionButtonSelected: {
     backgroundColor: '#1D4ED8',
+    borderColor: '#1D4ED8',
   },
 
   optionButtonText: {
     color: '#1D4ED8',
     fontWeight: '700',
+    fontSize: 13,
   },
 
   optionButtonTextSelected: {
-    color: '#fff',
+    color: '#FFFFFF',
   },
 
   row: {
     flexDirection: 'row',
-    marginBottom: 6,
+    marginBottom: 8,
   },
 
   halfInput: {
     flex: 1,
-    marginRight: 5,
+    marginRight: 6,
   },
 
   halfInputNoMargin: {
@@ -129,7 +147,7 @@ const styles = StyleSheet.create({
 
   thirdInput: {
     flex: 1,
-    marginRight: 5,
+    marginRight: 6,
   },
 
   thirdInputNoMargin: {
@@ -137,49 +155,57 @@ const styles = StyleSheet.create({
   },
 
   label: {
-    fontSize: 14,
-    marginBottom: 4,
-    marginTop: 6,
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 6,
+    marginTop: 8,
   },
 
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 10,
-    backgroundColor: '#f9f9f9',
+    borderColor: '#D1D5DB',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: '#F9FAFB',
+    fontSize: 14,
+    color: '#111827',
   },
 
   inputMatrix: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 6,
-    padding: 6,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 6,
     margin: 2,
     textAlign: 'center',
     fontSize: 12,
-    backgroundColor: '#fff',
+    color: '#111827',
+    backgroundColor: '#FFFFFF',
   },
 
   statusPreenchimento: {
-    marginTop: 8,
+    marginTop: 10,
     fontSize: 13,
-    color: '#555',
+    color: '#6B7280',
+    lineHeight: 19,
   },
 
   resultadoBox: {
     marginTop: 12,
-    padding: 12,
-    borderRadius: 8,
+    padding: 14,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#ddd',
-    backgroundColor: '#fff',
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
   },
 
   resultadoOk: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#15803D',
   },
 
@@ -193,35 +219,40 @@ const styles = StyleSheet.create({
   resultadoInfo: {
     fontSize: 13,
     marginBottom: 8,
-    color: '#444',
+    color: '#4B5563',
+    lineHeight: 19,
   },
 
   resultadoOkInline: {
     marginTop: 6,
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#15803D',
   },
 
   resultadoAlertaInline: {
     marginTop: 6,
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#B91C1C',
   },
 
   inputComentario: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 10,
-    backgroundColor: '#f9f9f9',
-    minHeight: 90,
+    borderColor: '#D1D5DB',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: '#F9FAFB',
+    minHeight: 110,
+    textAlignVertical: 'top',
+    fontSize: 14,
+    color: '#111827',
   },
 
   tableRow: {
     flexDirection: 'row',
-    marginBottom: 8,
+    marginBottom: 10,
     alignItems: 'flex-start',
   },
 
@@ -237,6 +268,8 @@ const styles = StyleSheet.create({
 
   tableHeader: {
     fontWeight: '700',
+    fontSize: 12,
+    color: '#374151',
     textAlign: 'center',
     marginBottom: 4,
   },
@@ -244,16 +277,16 @@ const styles = StyleSheet.create({
   infoAuxiliar: {
     marginTop: 8,
     fontSize: 13,
-    color: '#555',
-    lineHeight: 18,
+    color: '#6B7280',
+    lineHeight: 19,
   },
 
   filtroBox: {
-    marginTop: 6,
-    marginBottom: 8,
-    paddingBottom: 8,
+    marginTop: 8,
+    marginBottom: 10,
+    paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e5e5',
+    borderBottomColor: '#E5E7EB',
   },
 
   filterColumnTipo: {
@@ -273,15 +306,21 @@ const styles = StyleSheet.create({
 
   saveButton: {
     marginTop: 24,
-    backgroundColor: '#1D4ED8',
-    paddingVertical: 14,
-    borderRadius: 10,
+    backgroundColor: '#0E5A8A',
+    paddingVertical: 15,
+    borderRadius: 14,
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 24,
+    shadowColor: '#0E5A8A',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    elevation: 6,
   },
 
   saveButtonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
   },
